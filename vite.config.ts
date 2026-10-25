@@ -45,7 +45,8 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), ...(desktop ? [singleFile()] : [])],
     server: { port: 5173 },
-    base: desktop ? "./" : "/",
+    // Relative paths: the same build works at a domain's root and in a subfolder (GitHub Pages: /leuchtfeuer/).
+    base: "./",
     build: desktop
       ? {
           outDir: "dist-desktop",
