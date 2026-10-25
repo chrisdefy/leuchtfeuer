@@ -38,6 +38,8 @@ interface Props {
   onOpenSettings: () => void;
   /** Start the guided tour through the interface. */
   onTour?: () => void;
+  /** Set when a backup is due: days since the last one (null = never). */
+  backupReminder?: { days: number | null; onBackup: () => void; onLater: () => void };
 }
 
 export function chatCost(chat: Chat) {
@@ -334,6 +336,7 @@ export function Sidebar(props: Props) {
             </button>
           )}
         </div>
+        {props.backupReminder && <BackupReminder {...props.backupReminder} />}
         {props.hasKey && (props.credits || props.freeQuota) && (
           <span className="credits">
             {props.credits && (
@@ -363,6 +366,37 @@ export function Sidebar(props: Props) {
         )}
       </div>
     </aside>
+  );
+}
+
+/** A gentle nudge to save everything to a file; chats live only in this browser. */
+function BackupReminder(props: { days: number | null; onBackup: () => void; onLater: () => void }) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <div className="backup-nudge" role="status">
+      <p>
+        <Icon name="download" size={15} />
+        <span>
+          <strong>{props.days === null ? "Deine Chats sind noch nicht gesichert." : `Letzte Sicherung vor ${props.days} Tagen.`}</strong>{" "}
+          Sie liegen nur in diesem Browser. Eine Sicherungsdatei schützt sie, falls die Browserdaten gelöscht werden.
+        </span>
+      </p>
+      <div className="backup-nudge-actions">
+        <button
+          className="button primary small"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            Promise.resolve(props.onBackup()).finally(() => setBusy(false));
+          }}
+        >
+          {busy ? "Wird erstellt …" : "Jetzt sichern"}
+        </button>
+        <button className="button small" onClick={props.onLater} title="In einer Woche wieder erinnern">
+          Später
+        </button>
+      </div>
+    </div>
   );
 }
 

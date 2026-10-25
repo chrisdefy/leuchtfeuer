@@ -74,6 +74,8 @@ der Zeit vor der Umbenennung `router.*`; sie bleiben so, damit vorhandene Chats 
 - Werkbank „Aufgabe vorbereiten“ (`lib/workbench.ts`): Idee → Rückfragen → ausformulierte Aufgabe,
   Rolle und Vorgehen (als Anweisung nur für diesen Chat), Modellempfehlung.
 - Sicherung: alles als eine Datei herunterladen und wieder einlesen (`lib/backup.ts`, ohne API-Key).
+  Erinnerung in der Seitenleiste (`backupDue`): noch nie gesichert und der erste Chat ist 7 Tage alt, oder die letzte
+  Sicherung ist 30 Tage her und seitdem hat sich etwas geändert. „Später“ schiebt sie um 7 Tage.
 
 **Texte**
 - Fertige Texte (Brief, E-Mail, Beitrag) kommen als Textkarte (```` ```text ````) mit „Kopieren“ und „Als .txt

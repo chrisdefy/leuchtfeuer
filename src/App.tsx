@@ -36,7 +36,7 @@ import { OpenRouterLogin } from "./components/OpenRouterLogin";
 import { completeLogin } from "./lib/auth";
 import { convertAttachment, documentBlock, sendMode } from "./lib/documents";
 import { DocumentDialog } from "./components/DocumentDialog";
-import { backupFileName, makeBackup, mergeById, readBackup } from "./lib/backup";
+import { backupDue, backupFileName, makeBackup, mergeById, readBackup } from "./lib/backup";
 import { importRoles, loadRoles } from "./lib/roleTemplate";
 import { stopSpeaking } from "./lib/speech";
 import { Tooltips } from "./components/Tooltips";
@@ -1472,6 +1472,7 @@ export default function App() {
     a.download = backupFileName();
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setSettings((s) => ({ ...s, lastBackup: Date.now(), backupLater: undefined }));
     const parts = [count(chats.length, "Chat", "Chats"), count(rooms.length, "Chatroom", "Chatrooms"), files ? count(files, "Datei", "Dateien") : ""].filter(Boolean);
     setNotice({
       text: `Sicherung gespeichert (${parts.join(", ")}). Sie liegt in deinem Download-Ordner.${missing ? ` ${count(missing, "Datei fehlte", "Dateien fehlten")} schon vorher.` : ""}`,
@@ -1718,6 +1719,7 @@ export default function App() {
     ? contextUsage(activeChat, modelById.get(lanes[0]))
     : null;
   const turns = activeChat ? toTurns(activeChat.messages) : [];
+  const due = useMemo(() => backupDue(settings, [...chats, ...rooms]), [settings, chats, rooms]);
   const wide = turns.some((t) => t.answers.length > 1) || comparing;
 
   /** The single chat model that answered a turn, if exactly one did. Video jobs are not conversation turns. */
@@ -1876,6 +1878,15 @@ export default function App() {
         onToggleFolder={(id) => setFolders((all) => all.map((f) => (f.id === id ? { ...f, collapsed: !f.collapsed } : f)))}
         activeId={mode === "rooms" ? activeRoomId : activeId}
         credits={credits}
+        backupReminder={
+          due
+            ? {
+                days: due.days,
+                onBackup: () => downloadBackup().catch((e) => setNotice({ text: (e as Error).message, error: true })),
+                onLater: () => setSettings((s) => ({ ...s, backupLater: Date.now() })),
+              }
+            : undefined
+        }
         freeQuota={freeQuota}
         hasKey={!!settings.apiKey}
         onSelect={(id) => {

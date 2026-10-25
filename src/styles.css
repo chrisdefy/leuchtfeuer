@@ -6308,3 +6308,40 @@ fieldset.field > legend {
     stroke-dashoffset: 0;
   }
 }
+
+/* ---------- backup reminder (sidebar) ---------- */
+
+.backup-nudge {
+  display: grid;
+  gap: 10px;
+  order: -2;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--raised);
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+}
+
+.backup-nudge p {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  line-height: 1.45;
+}
+
+.backup-nudge p .icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--out);
+}
+
+.backup-nudge strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.backup-nudge-actions {
+  display: flex;
+  gap: 6px;
+}

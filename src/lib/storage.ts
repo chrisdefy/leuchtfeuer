@@ -131,6 +131,10 @@ export interface Settings {
   profiles?: Profile[];
   /** Profile every new chat starts with. */
   defaultProfile?: string;
+  /** When the last backup file was downloaded. */
+  lastBackup?: number;
+  /** When the backup reminder was put off with "Später". */
+  backupLater?: number;
   /** Text size for the whole app. */
   textSize?: "normal" | "large" | "xlarge";
   systemPrompt: string;

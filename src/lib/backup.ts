@@ -89,3 +89,33 @@ export function mergeById<T extends { id: string }>(current: T[], incoming: T[])
   const added = incoming.filter((x) => !have.has(x.id));
   return { merged: [...current, ...added], added: added.length };
 }
+
+const DAY = 86_400_000;
+/** A backup older than this, with changes since, gets a reminder. */
+const REMIND_AFTER_DAYS = 30;
+/** Never backed up: the reminder comes once the first chat is this old. */
+const FIRST_AFTER_DAYS = 7;
+/** "Später" keeps the reminder away this long. */
+const LATER_DAYS = 7;
+
+/**
+ * Whether to remind of a backup: chats only live in this browser, and clearing its data loses them.
+ * Returns the days since the last backup (null = never), or undefined when no reminder is due.
+ */
+export function backupDue(
+  settings: Pick<Settings, "lastBackup" | "backupLater">,
+  items: { messages: unknown[]; createdAt: number; updatedAt: number }[],
+  now = Date.now(),
+): { days: number | null } | undefined {
+  const used = items.filter((x) => x.messages.length);
+  if (!used.length) return undefined;
+  if (settings.backupLater && now - settings.backupLater < LATER_DAYS * DAY) return undefined;
+  if (settings.lastBackup) {
+    // Nothing new since the last backup: nothing to lose.
+    if (!used.some((x) => x.updatedAt > settings.lastBackup!)) return undefined;
+    const days = Math.floor((now - settings.lastBackup) / DAY);
+    return days >= REMIND_AFTER_DAYS ? { days } : undefined;
+  }
+  const oldest = Math.min(...used.map((x) => x.createdAt));
+  return now - oldest >= FIRST_AFTER_DAYS * DAY ? { days: null } : undefined;
+}
