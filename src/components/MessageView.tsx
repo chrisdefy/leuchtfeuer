@@ -310,7 +310,7 @@ function PassageEditor({ children, onEdit }: { children: ReactNode; onEdit: (mar
               aria-label="Was soll an der markierten Stelle anders werden?"
               disabled={busy}
             />
-            <button className="button primary small" type="submit" disabled={busy || !instruction.trim()}>
+            <button className="button primary small" type="submit" disabled={busy || !instruction.trim()} aria-busy={busy}>
               {busy ? "Wird geändert …" : "Ändern"}
             </button>
             <button type="button" className="ghost icon-only" onClick={close} aria-label="Abbrechen">

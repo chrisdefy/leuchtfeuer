@@ -104,7 +104,7 @@ export function DocumentDialog({ attachment: a, models, apiKey, bestFree, chatMo
               liest es einmal vollständig, danach arbeitet das Modell mit dem Text.
               {pages ? ` ${pages === 1 ? "1 Seite" : `${pages} Seiten`}, ca. ${cents(pages * OCR_PER_PAGE)}.` : ` Ca. ${cents(OCR_PER_PAGE)} pro Seite.`}
             </p>
-            <button className="button small" onClick={() => void run("ocr")} disabled={!!busy}>
+            <button className="button small" onClick={() => void run("ocr")} disabled={!!busy} aria-busy={busy === "ocr"}>
               <Icon name="search" size={15} />
               {busy === "ocr" ? "Liest …" : "Mit Texterkennung lesen"}
             </button>
@@ -131,7 +131,7 @@ export function DocumentDialog({ attachment: a, models, apiKey, bestFree, chatMo
           </label>
           {!a.summary && a.text && !a.scanned && (
             <div className="doc-summary-make">
-              <button className="button small" onClick={() => void run("summary")} disabled={!!busy || !models}>
+              <button className="button small" onClick={() => void run("summary")} disabled={!!busy || !models} aria-busy={busy === "summary"}>
                 <Icon name="summary" size={15} />
                 {busy === "summary" ? "Fasst zusammen …" : "Zusammenfassung erstellen"}
               </button>

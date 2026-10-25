@@ -390,6 +390,7 @@ export function VideoDialog(props: Props) {
                   className="ghost small enhance"
                   onClick={enhance}
                   disabled={enhancing || !prompt.trim() || !apiKey}
+                  aria-busy={enhancing}
                   title="Ergänzt Kamera, Licht, Stimmung und Ton, damit das Videomodell dich besser versteht"
                 >
                   <Icon name="sparkle" size={14} />

@@ -38,6 +38,7 @@ import { convertAttachment, documentBlock, sendMode } from "./lib/documents";
 import { DocumentDialog } from "./components/DocumentDialog";
 import { backupDue, backupFileName, makeBackup, mergeById, readBackup } from "./lib/backup";
 import { importRoles, loadRoles } from "./lib/roleTemplate";
+import { importTemplates, loadTemplates } from "./lib/roomTemplates";
 import { stopSpeaking } from "./lib/speech";
 import { Tooltips } from "./components/Tooltips";
 import { Workbench, type PreparedChat } from "./components/Workbench";
@@ -1465,7 +1466,7 @@ export default function App() {
 
   async function downloadBackup() {
     const { apiKey: _key, ...rest } = settings;
-    const { blob, files, missing } = await makeBackup({ chats, rooms, folders, roles: loadRoles(), settings: rest });
+    const { blob, files, missing } = await makeBackup({ chats, rooms, folders, roles: loadRoles(), templates: loadTemplates(), settings: rest });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -1489,6 +1490,7 @@ export default function App() {
       setRooms(r.merged);
       setFolders(f.merged);
       const roles = importRoles(b.roles);
+      const templates = importTemplates(b.templates ?? []);
       // Settings come along for a new computer; the key stays the one of this browser.
       setSettings((s) => ({
         ...s,
@@ -1505,6 +1507,7 @@ export default function App() {
         r.added && count(r.added, "Chatroom", "Chatrooms"),
         f.added && count(f.added, "Ordner", "Ordner"),
         roles && count(roles, "eigene Rolle", "eigene Rollen"),
+        templates && count(templates, "Raum-Vorlage", "Raum-Vorlagen"),
       ].filter(Boolean);
       setNotice({
         text: added.length ? `Wiederhergestellt: ${added.join(", ")}.` : "Alles aus der Sicherung war schon vorhanden. Es wurde nichts doppelt angelegt.",

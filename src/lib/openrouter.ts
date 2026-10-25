@@ -176,6 +176,18 @@ export interface ChatOptions {
   providerSort?: "throughput" | "price";
   /** Ask an audio-output model for sound. */
   audio?: { format: string; voice?: string };
+  /**
+   * Give up when the model delivers neither text nor thinking for this long (ms). Keep-alive pings
+   * do not count: a request stuck at the provider would otherwise wait forever.
+   */
+  stallMs?: number;
+}
+
+/** A request given up by the stall guard; the message says so in plain words. */
+export class StallError extends OpenRouterError {
+  constructor(seconds: number) {
+    super(`Die KI hat ${seconds} Sekunden lang nichts geliefert, die Anfrage wurde abgebrochen. Versuch es noch einmal, meist klappt es dann.`);
+  }
 }
 
 /** Data protection mode: only providers that keep nothing (Zero Data Retention). Set from the settings. */
@@ -237,6 +249,44 @@ function fetchCount(serverTools: unknown): number | undefined {
 }
 
 export async function streamChat(opts: ChatOptions, cb: StreamCallbacks): Promise<void> {
+  if (!opts.stallMs) return streamOnce(opts, cb);
+  // The guard aborts its own controller, so a stall can be told apart from the user stopping.
+  const ctrl = new AbortController();
+  const forward = () => ctrl.abort();
+  if (opts.signal.aborted) ctrl.abort();
+  opts.signal.addEventListener("abort", forward);
+  let stalled = false;
+  let timer = 0;
+  const alive = () => {
+    clearTimeout(timer);
+    timer = window.setTimeout(() => {
+      stalled = true;
+      ctrl.abort();
+    }, opts.stallMs);
+  };
+  const watch = <T extends unknown[]>(fn?: (...a: T) => void) => fn && ((...a: T) => (alive(), fn(...a)));
+  alive();
+  try {
+    await streamOnce(
+      { ...opts, signal: ctrl.signal },
+      {
+        ...cb,
+        onContent: watch(cb.onContent)!,
+        onReasoning: watch(cb.onReasoning)!,
+        onAudio: watch(cb.onAudio),
+        onImages: watch(cb.onImages),
+      },
+    );
+  } catch (e) {
+    if (stalled) throw new StallError(Math.round(opts.stallMs / 1000));
+    throw e;
+  } finally {
+    clearTimeout(timer);
+    opts.signal.removeEventListener("abort", forward);
+  }
+}
+
+async function streamOnce(opts: ChatOptions, cb: StreamCallbacks): Promise<void> {
   const res = await fetch(`${API}/chat/completions`, {
     method: "POST",
     headers: headers(opts.apiKey),
@@ -348,19 +398,32 @@ export function providerLabel(m: Pick<Model, "name" | "id">) {
   return i === -1 ? providerOf(m.id) : m.name.slice(0, i);
 }
 
-/** Non-interactive request: collects the streamed answer. `onText` sees the text as it grows. */
+/**
+ * Background jobs give up after this long without any sign of life from the model. Generous, because some
+ * thinking models show nothing while they think; quick jobs the user waits for set a shorter `stallMs`.
+ */
+export const HELPER_STALL_MS = 120_000;
+
+/** For jobs the user watches and that need no long thought, such as drafting roles. */
+export const QUICK_STALL_MS = 60_000;
+
+/**
+ * Non-interactive request: collects the streamed answer. `onText` sees the text as it grows.
+ * Without a signal it cannot be cancelled, but the stall guard still ends it, so no busy state hangs.
+ */
 export async function complete(
-  opts: ChatOptions,
+  opts: Omit<ChatOptions, "signal"> & { signal?: AbortSignal },
   onText?: (text: string) => void,
+  onThinking?: () => void,
 ): Promise<{ text: string; usage?: Usage }> {
   let text = "";
   let usage: Usage | undefined;
-  await streamChat(opts, {
+  await streamChat({ stallMs: HELPER_STALL_MS, ...opts, signal: opts.signal ?? new AbortController().signal }, {
     onContent: (t) => {
       text += t;
       onText?.(text);
     },
-    onReasoning: () => {},
+    onReasoning: () => onThinking?.(),
     onModel: () => {},
     onUsage: (u) => (usage = u),
   });

@@ -385,6 +385,7 @@ function BackupReminder(props: { days: number | null; onBackup: () => void; onLa
         <button
           className="button primary small"
           disabled={busy}
+          aria-busy={busy}
           onClick={() => {
             setBusy(true);
             Promise.resolve(props.onBackup()).finally(() => setBusy(false));

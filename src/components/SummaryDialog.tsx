@@ -219,7 +219,7 @@ export function SummaryDialog({ chat, modelId, models, apiKey, buildMessages, on
                       listet, was fehlt.
                       {checkEstimate !== undefined && <> Kosten ca. {formatCost(checkEstimate)}.</>}
                     </p>
-                    <button className="button small" onClick={check} disabled={checking || !summary.trim()}>
+                    <button className="button small" onClick={check} disabled={checking || !summary.trim()} aria-busy={checking}>
                       <Icon name="search" size={15} />
                       {checking ? "Prüft …" : "Auf Lücken prüfen"}
                     </button>

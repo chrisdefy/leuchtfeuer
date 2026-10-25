@@ -19,6 +19,7 @@ import {
   voiceMessages,
   goalCheckerOf,
   judgeOf,
+  lacksModel,
   leaderOf,
   memoryRequest,
   needsMemory,
@@ -40,6 +41,8 @@ import {
   type RoomMessage,
 } from "../../lib/rooms";
 import { downloadText, fileName, roomToMarkdown } from "../../lib/exporting";
+import { saveTemplate, templateFile, templateOf } from "../../lib/roomTemplates";
+import { RoomSettings, type RoomRules } from "./RoomSettings";
 import { DictateButton } from "../DictateButton";
 import { Icon } from "../Icon";
 import { Markdown } from "../Markdown";
@@ -65,8 +68,14 @@ interface Props {
   onOpenMenu: () => void;
 }
 
-/** Why the room stopped. With a `fix` it is a planned stop (goal, rounds, budget) that offers the way on. */
-type Halt = { title?: string; reason: string; fix?: "rounds" | "budget" };
+/**
+ * Why the room stopped. With a `fix` it is a planned stop (goal, rounds, budget) that offers the way on.
+ * With `retry` a participant could not answer; `resume` says whether the room was running at the time.
+ */
+type Halt = { title?: string; reason: string; fix?: "rounds" | "budget"; retry?: string; resume?: boolean };
+
+/** A turn that delivers nothing for this long is given up and reported, instead of waiting forever. */
+const TURN_STALL_MS = 90_000;
 
 /** Extra tokens for thinking models, on top of the answer length. */
 const THINKING_ALLOWANCE = 2_500;
@@ -97,6 +106,8 @@ export function RoomView(props: Props) {
   const [summarizing, setSummarizing] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [audioOpen, setAudioOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [templateNotice, setTemplateNotice] = useState<string | null>(null);
   const [protocol, setProtocol] = useState<{ text: string; loading: boolean; error?: string; cost?: number } | null>(null);
 
   const runningRef = useRef(false);
@@ -130,6 +141,12 @@ export function RoomView(props: Props) {
   );
 
   useEffect(() => {
+    if (!templateNotice) return;
+    const t = setTimeout(() => setTemplateNotice(null), 8000);
+    return () => clearTimeout(t);
+  }, [templateNotice]);
+
+  useEffect(() => {
     if (!waitUntil) return;
     const t = setInterval(() => setNow(Date.now()), 250);
     return () => clearInterval(t);
@@ -153,6 +170,11 @@ export function RoomView(props: Props) {
         title: `Alle ${r.maxRounds} Runden gespielt`,
         reason: "Das Gespräch ist zu Ende. Lass es bewerten, um zu sehen, was herausgekommen ist und was du daraus mitnehmen kannst.",
         fix: "rounds",
+      };
+    if (next && lacksModel(next, models))
+      return {
+        title: `${next.name} hat kein Modell`,
+        reason: `Ohne Modell kann ${next.name} nicht mitreden. Klick links auf ${next.name} und wähle eins, dann geht es weiter.`,
       };
     const used = roomCost(r);
     if (used >= r.budget)
@@ -251,6 +273,7 @@ export function RoomView(props: Props) {
             signal: ctrl.signal,
             maxTokens: LENGTHS[p.length].cap + (thinks ? THINKING_ALLOWANCE * (attempt + 1) : 0),
             reasoningEffort: thinks ? "low" : undefined,
+            stallMs: TURN_STALL_MS,
           },
           {
             onContent: (t) => {
@@ -283,7 +306,7 @@ export function RoomView(props: Props) {
         ok = false;
         const text = err instanceof TypeError ? "OpenRouter ist nicht erreichbar." : err.message;
         patchMsg((m) => ({ ...m, error: text }));
-        setHalt({ reason: `${p.name} konnte nicht antworten: ${text}` });
+        setHalt({ title: `${p.name} konnte nicht antworten`, reason: text, retry: p.id, resume: runningRef.current });
       }
     } finally {
       cancelAnimationFrame(frame);
@@ -423,6 +446,20 @@ export function RoomView(props: Props) {
     if (await speak(next)) await checkGoal(roundBefore);
   }
 
+  /** The failed turn once more: its empty attempt goes, and the room carries on as it was. */
+  function retry(h: Halt) {
+    const p = roomRef.current.participants.find((x) => x.id === h.retry);
+    if (!p) return setHalt(null);
+    update((r) => {
+      const last = r.messages[r.messages.length - 1];
+      const failed = last?.authorId === p.id && last.error && !last.content;
+      return failed ? { ...r, messages: r.messages.slice(0, -1) } : r;
+    });
+    setHalt(null);
+    if (h.resume && roomRef.current.order !== "manual") play(true);
+    else void step(p);
+  }
+
   function raise(fix: "rounds" | "budget") {
     update((r) => (fix === "rounds" ? { ...r, maxRounds: r.maxRounds + 2 } : { ...r, budget: Math.round((r.budget + 0.5) * 100) / 100 }));
     setHalt(null);
@@ -526,6 +563,43 @@ export function RoomView(props: Props) {
     if (parts.length && roomRef.current.messages.length) note(`${after.name}: ${parts.join(", ")}. Gilt ab dem nächsten Zug.`);
   }
 
+  /** Changes from the settings dialog: from the next turn on, with a note in the conversation saying what changed. */
+  function applyRules(next: RoomRules) {
+    const r = roomRef.current;
+    const parts: string[] = [];
+    if (next.topic !== r.topic) parts.push("Thema geändert");
+    if (next.cast !== (r.cast ?? "")) parts.push("Wer-ist-wer geändert");
+    if (next.goal !== (r.goal ?? "")) parts.push(next.goal ? "Ziel geändert" : "Ziel entfernt");
+    if (next.order !== r.order) parts.push(`Reihenfolge: ${ORDERS[next.order].split(" (")[0]}`);
+    if (next.maxRounds !== r.maxRounds) parts.push(`höchstens ${next.maxRounds} Runden`);
+    if (next.budget !== r.budget) parts.push(`Budget ${formatCost(next.budget)}`);
+    if (next.aiAware !== r.aiAware) parts.push(next.aiAware ? "die Teilnehmer wissen, dass sie KI sind" : "die Teilnehmer bleiben in ihren Rollen");
+    const goalChanged = next.goal !== (r.goal ?? "");
+    update((x) => ({
+      ...x,
+      ...next,
+      titleSource: next.title !== x.title ? "user" : x.titleSource,
+      goal: next.goal || undefined,
+      cast: next.cast || undefined,
+      // A new goal is checked afresh.
+      goalMet: goalChanged ? undefined : x.goalMet,
+    }));
+    if (parts.length && r.messages.length) note(`Einstellungen: ${parts.join(", ")}. Gilt ab dem nächsten Beitrag.`);
+    // More rounds or budget lift a stop they caused.
+    if (halt?.fix && !limitFor(roomRef.current, nextSpeaker(roomRef.current))) setHalt(null);
+  }
+
+  function storeTemplate(name: string, download: boolean, rules: RoomRules) {
+    try {
+      const t = templateOf({ ...roomRef.current, ...rules, goal: rules.goal || undefined, cast: rules.cast || undefined }, name);
+      saveTemplate(t);
+      if (download) downloadText(fileName(t.name).replace(/\.md$/, ".vorlage.json"), templateFile([t]), "application/json");
+      setTemplateNotice(`Vorlage „${t.name}“ gespeichert. Du findest sie beim Erstellen eines Chatrooms unter „Meine Vorlagen“.`);
+    } catch (e) {
+      setTemplateNotice((e as Error).message);
+    }
+  }
+
   function startAdding() {
     const r = roomRef.current;
     const role = leaderOf(r) ? "ideas" : "moderator";
@@ -611,7 +685,7 @@ export function RoomView(props: Props) {
               : "Bereit. Starte das Gespräch mit Play.";
 
   return (
-    <div className="room">
+    <div className="room" aria-busy={!!speaking || checking || summarizing}>
       <header className="room-head">
         <button className="ghost icon-only menu-button" onClick={props.onOpenMenu} aria-label="Räume anzeigen">
           <Icon name="menu" />
@@ -620,6 +694,14 @@ export function RoomView(props: Props) {
           <h1>{room.title}</h1>
           {room.goal && <p className="room-goal">Ziel: {room.goal}</p>}
         </div>
+        <button
+          className="button small"
+          onClick={() => setSettingsOpen(true)}
+          title="Teilnehmer, Thema, Ziel und Regeln ansehen oder ändern; als Vorlage speichern"
+        >
+          <Icon name="settings" size={15} />
+          Einstellungen
+        </button>
         <button
           className="button small review-button"
           onClick={() => setReviewOpen(true)}
@@ -686,7 +768,9 @@ export function RoomView(props: Props) {
                     </span>
                     <span className="person-role">{p.roleName || "Teilnehmer"}</span>
                     <span className="person-model">
-                      <span>{p.human ? "Du" : modelLabel(p.model)}</span>
+                      <span className={lacksModel(p, models) ? "error-text" : undefined}>
+                        {p.human ? "Du" : lacksModel(p, models) ? "Kein Modell, bitte wählen" : modelLabel(p.model)}
+                      </span>
                       {!p.human && participantCost(room, p.id) > 0 && <span>{formatCost(participantCost(room, p.id))}</span>}
                     </span>
                     {p.finalOnly && <span className="person-role">Spricht erst in der letzten Runde</span>}
@@ -801,6 +885,11 @@ export function RoomView(props: Props) {
               onMoreBudget={() => {
                 raise("budget");
                 play();
+              }}
+              onRetry={() => retry(halt)}
+              onChangeModel={() => {
+                setHalt(null);
+                setEditing(halt.retry ?? null);
               }}
               onDismiss={() => setHalt(null)}
             />
@@ -952,6 +1041,27 @@ export function RoomView(props: Props) {
           </button>
         </form>
       </footer>
+
+      {settingsOpen && (
+        <RoomSettings
+          room={room}
+          models={models}
+          onApply={applyRules}
+          onEditParticipant={setEditing}
+          onAddParticipant={startAdding}
+          onSaveTemplate={storeTemplate}
+          onClose={() => setSettingsOpen(false)}
+        />
+      )}
+
+      {templateNotice && (
+        <div className="toast" role="status">
+          <span>{templateNotice}</span>
+          <button className="link-button" onClick={() => setTemplateNotice(null)}>
+            OK
+          </button>
+        </div>
+      )}
 
       {editingP && (
         <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && setEditing(null)}>
@@ -1199,6 +1309,8 @@ function HaltCard(props: {
   onReview: () => void;
   onMoreRounds: () => void;
   onMoreBudget: () => void;
+  onRetry: () => void;
+  onChangeModel: () => void;
   onDismiss: () => void;
 }) {
   const { halt } = props;
@@ -1226,6 +1338,16 @@ function HaltCard(props: {
           {halt.fix === "budget" && (
             <button className="button small primary" onClick={props.onMoreBudget}>
               Budget um 0,50 $ erhöhen
+            </button>
+          )}
+          {halt.retry && (
+            <button className="button small primary" onClick={props.onRetry}>
+              Erneut versuchen
+            </button>
+          )}
+          {halt.retry && (
+            <button className="button small" onClick={props.onChangeModel}>
+              Anderes Modell wählen
             </button>
           )}
           {!halt.fix && (

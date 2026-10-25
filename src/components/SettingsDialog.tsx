@@ -375,6 +375,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
             <button
               className="button small"
               disabled={backingUp}
+              aria-busy={backingUp}
               onClick={() => {
                 setBackingUp(true);
                 onBackup().finally(() => setBackingUp(false));

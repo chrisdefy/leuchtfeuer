@@ -51,7 +51,7 @@ export function OpenRouterLogin({ onKey, primary, label = "Mit OpenRouter anmeld
   return (
     <div className="or-login">
       {redirect ? (
-        <button type="button" className={`button${primary ? " primary" : ""}`} onClick={() => void begin()} disabled={busy}>
+        <button type="button" className={`button${primary ? " primary" : ""}`} onClick={() => void begin()} disabled={busy} aria-busy={busy}>
           <Icon name="login" size={16} />
           {busy ? "Weiter zu OpenRouter …" : label}
         </button>
@@ -94,7 +94,7 @@ export function OpenRouterLogin({ onKey, primary, label = "Mit OpenRouter anmeld
               placeholder="Code einfügen"
               onChange={(e) => setCode(e.target.value)}
             />
-            <button type="submit" className="button primary" disabled={busy || !code.trim()}>
+            <button type="submit" className="button primary" disabled={busy || !code.trim()} aria-busy={busy}>
               {busy ? "Prüft …" : "Verbinden"}
             </button>
           </div>

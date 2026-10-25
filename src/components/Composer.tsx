@@ -199,6 +199,7 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(prop
               className="tool"
               onClick={props.onEnhance}
               disabled={props.disabled || props.enhancing || !props.value.trim()}
+              aria-busy={!!props.enhancing}
               title="Ergänzt Motiv, Bildaufbau, Licht und Stil, damit das Bildmodell dich besser versteht"
             >
               <Icon name="sparkle" size={17} />

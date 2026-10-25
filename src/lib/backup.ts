@@ -2,10 +2,11 @@ import type { Folder } from "./folders";
 import { blobIdsOf, blobToDataUrl, dataUrlToBlob, getBlob, putBlob, type Attachment } from "./files";
 import type { SavedRole } from "./roleTemplate";
 import type { Room } from "./rooms";
+import type { RoomTemplate } from "./roomTemplates";
 import type { Chat, Settings } from "./storage";
 
 /**
- * One file with everything this browser holds: chats, chatrooms, folders, own roles,
+ * One file with everything this browser holds: chats, chatrooms, folders, own roles, room templates,
  * settings and the pictures, videos and recordings in them. The API key stays out:
  * a backup file gets copied around, a key should not.
  */
@@ -21,6 +22,8 @@ export interface Backup {
   rooms: Room[];
   folders: Folder[];
   roles: SavedRole[];
+  /** Saved room setups; missing in backups made before templates existed. */
+  templates?: RoomTemplate[];
   settings: Omit<Settings, "apiKey">;
   /** Attachment id → data URL. */
   files: Record<string, string>;
@@ -78,6 +81,7 @@ export async function readBackup(file: File): Promise<Backup> {
     rooms: list<Room>(parsed.rooms),
     folders: list<Folder>(parsed.folders),
     roles: list<SavedRole>(parsed.roles),
+    templates: list<RoomTemplate>(parsed.templates),
     settings: (parsed.settings ?? {}) as Backup["settings"],
     files: {},
   };

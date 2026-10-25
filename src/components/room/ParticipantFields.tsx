@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { fillTemplate, loadRoles, parseTemplate, saveRole, templateFor, type RoleDraft } from "../../lib/roleTemplate";
 import { formatPrice } from "../../lib/format";
 import { perMillion, shortName, type Model } from "../../lib/openrouter";
-import { CUSTOM_ROLE, LENGTHS, PALETTE, ROLES, TIERS, roleById, type Length, type Participant } from "../../lib/rooms";
+import { CUSTOM_ROLE, LENGTHS, PALETTE, ROLES, TIERS, lacksModel, roleById, type Length, type Participant } from "../../lib/rooms";
 
 const MORE = "__more";
 
@@ -22,6 +22,7 @@ export function ParticipantFields({ participant: p, models, onChange, onPickMode
   const byId = useMemo(() => new Map((models ?? []).map((m) => [m.id, m])), [models]);
   const [saved, setSaved] = useState(loadRoles);
   const isOwn = p.roleId === CUSTOM_ROLE || p.roleId.startsWith("saved-");
+  const noModel = lacksModel(p, models);
 
   const modelOptions = useMemo(() => {
     const tiers = Object.values(TIERS).flatMap((t) => t.models.map((id) => ({ id, tier: t.label })));
@@ -104,10 +105,17 @@ export function ParticipantFields({ participant: p, models, onChange, onPickMode
       </Field>
       <Field label="Modell" compact={compact}>
         <select
-          className="select"
-          value={p.model}
+          className={`select${noModel ? " missing" : ""}`}
+          // Without a usable model the select would silently show its first entry, as if one were set.
+          value={noModel ? "" : p.model}
+          aria-invalid={noModel || undefined}
           onChange={(e) => (e.target.value === MORE ? onPickModel() : onChange({ model: e.target.value }))}
         >
+          {noModel && (
+            <option value="" disabled>
+              Modell wählen …
+            </option>
+          )}
           {Object.values(TIERS).map((t) => (
             <optgroup key={t.label} label={t.label}>
               {modelOptions
@@ -119,7 +127,7 @@ export function ParticipantFields({ participant: p, models, onChange, onPickMode
                 ))}
             </optgroup>
           ))}
-          {modelOptions.some((o) => o.tier === "Gewählt") && (
+          {!noModel && modelOptions.some((o) => o.tier === "Gewählt") && (
             <optgroup label="Gewählt">
               <option value={p.model}>{label(p.model)}</option>
             </optgroup>
@@ -236,7 +244,7 @@ function RoleBuilder(props: { apiKey?: string; models: Model[] | null; fallbackM
             onChange={(e) => setIdea(e.target.value)}
           />
           {props.apiKey && (
-            <button type="button" className="button small" onClick={fill} disabled={busy || !idea.trim()}>
+            <button type="button" className="button small" onClick={fill} disabled={busy || !idea.trim()} aria-busy={busy}>
               {busy ? "Füllt aus …" : "Mit KI ausfüllen"}
             </button>
           )}

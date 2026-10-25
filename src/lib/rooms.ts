@@ -393,8 +393,9 @@ export function lastSpeaker(room: Room) {
 
 /** Next speaker (AI or the human participant) for automatic orders. */
 export function nextSpeaker(room: Room): Participant | undefined {
-  // Whoever was addressed answers next, even if they already spoke this round.
-  const addressed = room.nextUp && eligible(room).find((p) => p.id === room.nextUp);
+  // Whoever was addressed answers next, even if they already spoke this round,
+  // and even a role that otherwise waits for the last round: being asked directly is an invitation.
+  const addressed = room.nextUp && room.participants.find((p) => p.id === room.nextUp && !p.paused);
   if (addressed) return addressed;
   const waiting = eligible(room).filter((p) => !room.spoken.includes(p.id));
   if (!waiting.length) return undefined;
@@ -437,6 +438,26 @@ export function addressee(room: Room, authorId: string, text: string, byName: bo
     }
   }
   return best?.id;
+}
+
+/** An AI participant needs a model that exists; humans speak for themselves. */
+export function lacksModel(p: Participant, models: Model[] | null) {
+  return !p.human && (!p.model || (!!models && !models.some((m) => m.id === p.model)));
+}
+
+/**
+ * AI participants without a usable model get one from `pool` so every character can speak:
+ * the one used least so far, so different makers keep meeting.
+ */
+export function withModels(participants: Participant[], models: Model[] | null, pool: string[]) {
+  const uses = new Map(pool.map((id) => [id, 0]));
+  for (const p of participants) if (!p.human && uses.has(p.model)) uses.set(p.model, uses.get(p.model)! + 1);
+  return participants.map((p) => {
+    if (!lacksModel(p, models) || !pool.length) return p;
+    const model = pool.reduce((a, b) => (uses.get(b)! < uses.get(a)! ? b : a));
+    uses.set(model, uses.get(model)! + 1);
+    return { ...p, model };
+  });
 }
 
 export function roomCost(room: Room) {
@@ -826,7 +847,15 @@ export function castText(people: { name: string; roleName: string; relation?: st
     .join("\n");
 }
 
-export function scenarioMessages(situation: string): ChatMessage[] {
+/** Documents for drafting, as text blocks; the model is told to build on them. */
+function withDocuments(text: string, documents: string[]) {
+  return documents.length ? `${text}\n\nBeigefügte Unterlagen:\n\n${documents.join("\n\n")}` : text;
+}
+
+const DOCUMENT_RULE =
+  "Hat der Nutzer Unterlagen beigefügt, stütze Ausgangslage, Figuren, Positionen und Ziel darauf: Übernimm Namen, Zahlen, Fakten und Streitpunkte aus ihnen und erfinde nichts, was ihnen widerspricht. Die Beschreibung des Nutzers geht vor, wenn sie etwas anderes sagt.";
+
+export function scenarioMessages(situation: string, documents: string[] = []): ChatMessage[] {
   return [
     {
       role: "system",
@@ -850,17 +879,38 @@ export function scenarioMessages(situation: string): ChatMessage[] {
     }
   ]
 }
-Regeln: 2 bis 5 Teilnehmer, unterschiedliche Vornamen. Gegensätzliche Interessen, damit es echt wird, aber niemand ist eine Karikatur. Höchstens eine Rolle leitet. Wenn der Nutzer sagt, dass er selbst teilnehmen oder üben will („ich“, „mein Chef“, „meine Vermieterin“), bekommt er genau eine Rolle mit "mensch": true; seine Gegenüber sind dann die KI-Rollen. Alles auf Deutsch.`,
+Regeln: 2 bis 5 Teilnehmer, unterschiedliche Vornamen. Gegensätzliche Interessen, damit es echt wird, aber niemand ist eine Karikatur. Höchstens eine Rolle leitet. "nurAmEnde" nur, wenn der Nutzer ausdrücklich eine Jury oder ein Urteil am Schluss will; sonst sprechen alle in jeder Runde. "mensch": true bekommt genau eine Rolle und nur dann, wenn der Nutzer ausdrücklich sagt, dass er selbst mitspielen oder üben will (zum Beispiel „ich will üben“, „ich spiele mich selbst“, „ich will meinem Chef sagen …“). Erzählt er nur von anderen („meine Mutter und meine Schwester streiten“), spielen alle Rollen KI-Modelle. ${DOCUMENT_RULE} Alles auf Deutsch.`,
     },
-    { role: "user", content: situation },
+    { role: "user", content: withDocuments(situation, documents) },
   ];
 }
 
+/**
+ * The JSON object in a model's answer. Tolerates a code fence around it, text before and after,
+ * and trailing commas, which smaller models write now and then.
+ */
+export function jsonIn(text: string): Record<string, unknown> | null {
+  const raw = /\{[\s\S]*\}/.exec(text)?.[0];
+  if (!raw) return null;
+  for (const candidate of [raw, raw.replace(/,\s*([}\]])/g, "$1")]) {
+    try {
+      return JSON.parse(candidate);
+    } catch {
+      /* try the repaired form */
+    }
+  }
+  return null;
+}
+
+/** Names of the characters drafted so far, read from the half-written answer while it streams in. */
+export function draftedNames(partial: string) {
+  return [...partial.matchAll(/"name"\s*:\s*"([^"]{1,30})"/g)].map((m) => m[1]);
+}
+
 export function parseScenario(text: string): GeneratedScenario | null {
-  const json = /\{[\s\S]*\}/.exec(text)?.[0];
-  if (!json) return null;
+  const v = jsonIn(text);
+  if (!v) return null;
   try {
-    const v = JSON.parse(json);
     const people = Array.isArray(v.teilnehmer) ? v.teilnehmer : [];
     const participants = people
       .filter((p: Record<string, unknown>) => typeof p?.name === "string" && p.name.trim())
@@ -875,6 +925,9 @@ export function parseScenario(text: string): GeneratedScenario | null {
         human: p.mensch === true,
         gender: p.geschlecht === "w" || p.geschlecht === "m" ? (p.geschlecht as "w" | "m") : undefined,
       }));
+    // Only one character can be the user; any further one is played by a model.
+    let humans = 0;
+    for (const p of participants) if (p.human && humans++) p.human = false;
     if (participants.filter((p: { human: boolean }) => !p.human).length < 2) return null;
     return {
       title: String(v.titel ?? "").trim(),
@@ -952,7 +1005,7 @@ export function fallbackVoices(participants: Participant[], taken: string[] = []
 
 // ---- step 3 helper: work out the idea, who is who, how they relate ---------------------
 
-export function elaborateMessages(idea: string, goal: string, participants: Participant[]): ChatMessage[] {
+export function elaborateMessages(idea: string, goal: string, participants: Participant[], documents: string[] = []): ChatMessage[] {
   const people = participants
     .map((p) =>
       p.human
@@ -969,9 +1022,9 @@ export function elaborateMessages(idea: string, goal: string, participants: Part
   "ziel": "woran man erkennt, dass das Gespräch fertig ist; übernimm das Ziel des Nutzers, wenn er eins genannt hat",
   "besetzung": [ { "name": "genau der Name aus der Besetzung", "rolle": "wer die Figur in dieser Situation ist, ein bis drei Wörter, z. B. Schwester, Vermieter, Schlichterin", "beziehung": "wer diese Figur in dieser Situation ist und wie sie zu den anderen steht, mit deren Namen: Verwandtschaft, Arbeit, Vorgeschichte, Spannungen. Ein bis zwei Sätze" } ]
 }
-Jede Figur der Besetzung kommt genau einmal vor. Ihre Haltung aus der Besetzung bleibt (wer provoziert, provoziert weiter; wer vermittelt, vermittelt); erfinde keine neuen Figuren. Alles auf Deutsch.`,
+Jede Figur der Besetzung kommt genau einmal vor. Ihre Haltung aus der Besetzung bleibt (wer provoziert, provoziert weiter; wer vermittelt, vermittelt); erfinde keine neuen Figuren. ${DOCUMENT_RULE} Alles auf Deutsch.`,
     },
-    { role: "user", content: `Idee: ${idea}${goal ? `\nZiel: ${goal}` : ""}\n\nBesetzung:\n${people}` },
+    { role: "user", content: withDocuments(`Idee: ${idea}${goal ? `\nZiel: ${goal}` : ""}\n\nBesetzung:\n${people}`, documents) },
   ];
 }
 
@@ -979,10 +1032,9 @@ export function parseElaboration(
   text: string,
   participants: Participant[],
 ): { topic: string; goal: string; cast: string; roles: Record<string, string> } | null {
-  const json = /\{[\s\S]*\}/.exec(text)?.[0];
-  if (!json) return null;
+  const v = jsonIn(text);
+  if (!v) return null;
   try {
-    const v = JSON.parse(json);
     const rows: { name?: unknown; rolle?: unknown; beziehung?: unknown }[] = Array.isArray(v.besetzung) ? v.besetzung : [];
     const rowOf = (p: Participant) => rows.find((r) => String(r.name ?? "").trim().toLowerCase() === p.name.trim().toLowerCase());
     // Situational role names ("Schwester") replace generic ones ("Contra"); the behaviour stays in the role instruction.
