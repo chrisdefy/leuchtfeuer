@@ -117,6 +117,10 @@ der Zeit vor der Umbenennung `router.*`; sie bleiben so, damit vorhandene Chats 
 - Hilfe-Hinweise beim Überfahren aller Symbole (`components/Tooltips.tsx`).
 
 **Aussehen** („Nachtsignal“)
+- Startsequenz (`components/Intro.tsx`, einmal pro Browser-Tab, Klick oder Taste überspringt): Das Licht leuchtet
+  einen direkt an, schwenkt nach rechts in seinen Lichtkegel, der Name leuchtet auf, dann fliegt das Zeichen an seinen
+  Platz in der Seitenleiste, während die App darunter einblendet. SVG und CSS, keine Bibliothek; bei „Bewegung
+  reduzieren“ nur ein kurzes Einblenden. Logo als Komponente `components/BeaconMark.tsx`.
 - Dunkel als Standard, dazu Hell und „Wie das Gerät“; Schriftgröße Normal, Groß, Sehr groß (Einstellungen, gilt
   sofort). `index.html` setzt beides vor dem ersten Bild, damit nichts weiß aufblitzt. Alle Textfarben ≥ 4,5:1.
 - Begrüßung und leerer Chat: leuchtende Signallinien in reinem WebGL (`components/SignalField.tsx`), reagieren auf

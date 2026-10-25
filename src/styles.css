@@ -6116,3 +6116,195 @@ fieldset.field > legend {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+
+/* ---------- start sequence (Intro.tsx) ---------- */
+
+/* The sidebar's mark waits until the flying one lands on it. */
+.intro-running .sidebar .wordmark {
+  visibility: hidden;
+}
+
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+/* Sized like the sidebar's wordmark times four, so one uniform scale lands it exactly. */
+.intro-lockup {
+  display: flex;
+  align-items: center;
+  font-family: var(--display);
+  font-size: min(6.5rem, 12vw);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  color: var(--ink);
+  transform-origin: 0 0;
+}
+
+.intro-mark {
+  position: relative;
+  flex: none;
+  width: 1.2em;
+  height: 1.2em;
+}
+
+.intro-mark svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* The light shining straight at you: a flare out of the lamp that fills the screen, then turns away. */
+.intro-glare {
+  position: absolute;
+  left: 31.25%;
+  top: 43.75%;
+}
+
+.intro-glare::before {
+  content: "";
+  position: absolute;
+  left: -80vmax;
+  top: -80vmax;
+  width: 160vmax;
+  height: 160vmax;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgb(255 255 255 / 0.95) 0,
+    color-mix(in srgb, var(--out) 65%, transparent) 3.5%,
+    color-mix(in srgb, var(--in) 24%, transparent) 15%,
+    transparent 45%
+  );
+  opacity: 0;
+  transform: scale(0.04);
+  animation: intro-glare 1350ms cubic-bezier(0.25, 0.7, 0.3, 1) forwards;
+  pointer-events: none;
+}
+
+@keyframes intro-glare {
+  0% {
+    opacity: 0;
+    transform: scale(0.04);
+  }
+  35% {
+    opacity: 1;
+    transform: scale(0.6);
+  }
+  55% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.05);
+  }
+}
+
+.intro .beacon-light,
+.intro .beacon-core {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: intro-light 650ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes intro-light {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+/* Then the lamp swings to the right: the beam turns into place and widens. */
+.intro .beacon-beam {
+  transform-box: view-box;
+  transform-origin: 10px 14px;
+  animation: intro-beam 850ms 600ms cubic-bezier(0.3, 0.7, 0.2, 1) both;
+}
+
+@keyframes intro-beam {
+  from {
+    opacity: 0;
+    transform: rotate(-42deg) scaleX(0.12);
+  }
+  55% {
+    opacity: 1;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.intro .beacon-horizon {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: intro-draw 750ms 750ms ease-out forwards;
+}
+
+@keyframes intro-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* The name opens beside the mark, which moves aside, and lights up as if caught by the beam. */
+.intro-word {
+  display: inline-block;
+  overflow: hidden;
+  max-width: 0;
+  white-space: nowrap;
+  animation: intro-open 800ms 1250ms cubic-bezier(0.3, 0.7, 0.2, 1) forwards;
+}
+
+.intro-word > span {
+  display: inline-block;
+  padding-left: 0.4em;
+  animation: intro-name 1100ms 1300ms ease-out both;
+}
+
+@keyframes intro-open {
+  to {
+    max-width: 8em;
+  }
+}
+
+@keyframes intro-name {
+  from {
+    opacity: 0;
+    filter: blur(0.08em);
+    text-shadow: 0 0 0.4em var(--out);
+  }
+  to {
+    opacity: 1;
+    filter: none;
+    text-shadow: 0 0 0 transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro-glare,
+  .intro *,
+  .intro *::before {
+    animation: none !important;
+  }
+
+  .intro-glare {
+    display: none;
+  }
+
+  .intro-word {
+    max-width: 8em;
+  }
+
+  .intro .beacon-horizon {
+    stroke-dashoffset: 0;
+  }
+}

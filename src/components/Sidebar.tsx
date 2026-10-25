@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Folder } from "../lib/folders";
 import { formatCost, formatRelativeDay } from "../lib/format";
 import type { Chat } from "../lib/storage";
+import { BeaconMark } from "./BeaconMark";
 import { Icon } from "./Icon";
 
 export type Mode = "chats" | "rooms";
@@ -189,19 +190,7 @@ export function Sidebar(props: Props) {
     <aside className="sidebar">
       <div className="sidebar-head">
         <span className="wordmark" aria-label="Leuchtfeuer">
-          {/* A light, its beam and the horizon: the way through in the dark. */}
-          <svg viewBox="0 0 32 32" width="24" height="24" aria-hidden="true">
-            <defs>
-              <linearGradient id="wordmark-beam" x1="0" x2="1" y1="0" y2="0">
-                <stop offset="0" stopColor="var(--out)" stopOpacity="0.9" />
-                <stop offset="1" stopColor="var(--in)" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <path d="M10 14 29 6.5V21.5Z" fill="url(#wordmark-beam)" />
-            <circle cx="10" cy="14" r="3.2" fill="var(--ink)" />
-            <circle cx="10" cy="14" r="1.5" fill="var(--out)" />
-            <path d="M4 24.5c4-1.6 8-1.6 12 0s8 1.6 12 0" stroke="var(--in)" strokeWidth="1.8" fill="none" strokeLinecap="round" />
-          </svg>
+          <BeaconMark size={24} id="wordmark" />
           Leuchtfeuer
         </span>
         <button

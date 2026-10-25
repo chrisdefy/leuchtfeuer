@@ -27,6 +27,7 @@ import { setHelperData } from "./lib/helpers";
 import { fusionAnswerUsd, fusionBrief, fusionTeam } from "./lib/fusion";
 import { ProfileMenu } from "./components/ProfileMenu";
 import { ProfileDialog } from "./components/ProfileDialog";
+import { Intro, introPending } from "./components/Intro";
 import { findLinks } from "./lib/links";
 import { VISUAL_GUIDE } from "./lib/visual";
 import { TEXT_GUIDE, cleanPassage, locate, passagePrompt } from "./lib/textwork";
@@ -191,6 +192,8 @@ export default function App() {
   /** Profile of the new chat; undefined = the default profile from the settings, null = none. */
   const [draftProfile, setDraftProfile] = useState<string | null | undefined>(startDraft?.profile);
   const [profilesOpen, setProfilesOpen] = useState(false);
+  /** The start sequence, once per browser tab. */
+  const [intro, setIntro] = useState(introPending);
   /** Which guided tour is open: through a chat or through a chatroom. */
   const [tour, setTour] = useState<"chat" | "room" | null>(null);
   /** The room that was open before the chatroom tour, to return to afterwards. */
@@ -2538,6 +2541,7 @@ export default function App() {
       )}
 
       <Tooltips />
+      {intro && <Intro onDone={() => setIntro(false)} />}
 
       {notice && (
         <div className={`toast${notice.error ? " error" : ""}`} role={notice.error ? "alert" : "status"}>
