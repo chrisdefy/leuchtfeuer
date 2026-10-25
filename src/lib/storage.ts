@@ -135,6 +135,8 @@ export interface Settings {
   lastBackup?: number;
   /** When the backup reminder was put off with "Später". */
   backupLater?: number;
+  /** "Nicht mehr erinnern": no backup reminders; can be switched back on in the settings. */
+  noBackupReminder?: boolean;
   /** Text size for the whole app. */
   textSize?: "normal" | "large" | "xlarge";
   systemPrompt: string;

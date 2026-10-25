@@ -36,6 +36,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
   const [defaultMode, setDefaultMode] = useState(settings.defaultMode ?? "best-free");
   const [dictateSend, setDictateSend] = useState(!!settings.dictateSend);
   const [zdr, setZdr] = useState(!!settings.zdr);
+  const [backupReminder, setBackupReminder] = useState(!settings.noBackupReminder);
   const [unrestricted, setUnrestricted] = useState(!!settings.unrestricted);
   const [tiers, setTiers] = useState(settings.tiers ?? {});
   const [voiceMode, setVoiceMode] = useState(settings.voiceMode ?? "browser");
@@ -63,7 +64,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
   }, []);
 
   function save() {
-    onSave({ apiKey: apiKey.trim(), systemPrompt, temperature, defaultMode, dictateSend, zdr, unrestricted, tiers, voiceMode, webResults, naturalVoice, browserVoice: browserVoice || undefined });
+    onSave({ apiKey: apiKey.trim(), systemPrompt, temperature, defaultMode, dictateSend, zdr, unrestricted, tiers, voiceMode, webResults, naturalVoice, browserVoice: browserVoice || undefined, noBackupReminder: !backupReminder || undefined });
     onClose();
   }
 
@@ -398,6 +399,10 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
               }}
             />
           </div>
+          <label className="check">
+            <input type="checkbox" checked={backupReminder} onChange={(e) => setBackupReminder(e.target.checked)} />
+            An eine Sicherung erinnern, wenn die letzte über 4 Wochen her ist
+          </label>
         </fieldset>
 
         <footer className="dialog-foot">

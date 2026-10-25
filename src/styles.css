@@ -6345,3 +6345,9 @@ fieldset.field > legend {
   display: flex;
   gap: 6px;
 }
+
+.backup-never {
+  justify-self: start;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}

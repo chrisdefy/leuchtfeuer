@@ -52,9 +52,6 @@ Du brauchst ein [OpenRouter-Konto](https://openrouter.ai). Die Anmeldung geht in
 zum Beispiel mit deinem Google-Konto. Viele Modelle sind kostenlos, für die anderen lädst du bei OpenRouter
 Guthaben auf.
 
-**Desktop-Version:** `npm run pack:desktop` baut `Leuchtfeuer-Desktop.zip`. Darin steckt eine einzige Datei
-`Leuchtfeuer.html`, die per Doppelklick im Browser startet, ohne Installation.
-
 **Selbst bauen und starten:**
 
 ```sh
@@ -76,7 +73,7 @@ zum Beispiel Cloudflare Pages oder Netlify. Ein Server mit eigener Logik ist nic
 
 ## Für Entwickler
 
-Aufbau, alle Funktionen im Detail, Speicherorte und die Desktop-Version: [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
+Aufbau, alle Funktionen im Detail und Speicherorte: [docs/ENTWICKLUNG.md](docs/ENTWICKLUNG.md).
 Stack: Vite, React, TypeScript, ohne Backend.
 
 ## Hinweis

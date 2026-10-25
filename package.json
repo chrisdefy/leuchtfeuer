@@ -7,9 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
-    "build:desktop": "tsc --noEmit && vite build --mode desktop",
-    "pack:desktop": "npm run build:desktop && cp \"desktop/So startest du Leuchtfeuer.txt\" dist-desktop/ && rm -f Leuchtfeuer-Desktop.zip && cd dist-desktop && zip -q -X ../Leuchtfeuer-Desktop.zip Leuchtfeuer.html \"So startest du Leuchtfeuer.txt\""
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@breezystack/lamejs": "^1.2.7",

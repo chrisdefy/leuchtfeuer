@@ -2,8 +2,6 @@ node_modules
 dist
 .DS_Store
 .remember
-dist-desktop
-Leuchtfeuer-Desktop.zip
 # Personal API key file, never in git
 OpenRounter.env.txt
 *.env

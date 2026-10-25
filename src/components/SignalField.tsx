@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 /**
  * The "Nachtsignal" moment: glowing signal lines drifting behind the welcome screen and empty chats.
  * Typing makes them swell, and while a model thinks a pulse runs along them. Raw WebGL (no library,
- * so the desktop file stays small); one still frame for reduced motion; nothing at all without WebGL.
+ * so the page stays small); one still frame for reduced motion; nothing at all without WebGL.
  * Paused while the tab is hidden.
  */
 export function SignalField({ thinking }: { thinking: boolean }) {

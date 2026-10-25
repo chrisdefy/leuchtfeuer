@@ -39,7 +39,7 @@ interface Props {
   /** Start the guided tour through the interface. */
   onTour?: () => void;
   /** Set when a backup is due: days since the last one (null = never). */
-  backupReminder?: { days: number | null; onBackup: () => void; onLater: () => void };
+  backupReminder?: { days: number | null; onBackup: () => void; onLater: () => void; onNever: () => void };
 }
 
 export function chatCost(chat: Chat) {
@@ -370,7 +370,7 @@ export function Sidebar(props: Props) {
 }
 
 /** A gentle nudge to save everything to a file; chats live only in this browser. */
-function BackupReminder(props: { days: number | null; onBackup: () => void; onLater: () => void }) {
+function BackupReminder(props: { days: number | null; onBackup: () => void; onLater: () => void; onNever: () => void }) {
   const [busy, setBusy] = useState(false);
   return (
     <div className="backup-nudge" role="status">
@@ -396,6 +396,9 @@ function BackupReminder(props: { days: number | null; onBackup: () => void; onLa
           Später
         </button>
       </div>
+      <button className="link-button backup-never" onClick={props.onNever} title="Lässt sich in den Einstellungen unter „Sicherung“ wieder einschalten">
+        Nicht mehr erinnern
+      </button>
     </div>
   );
 }

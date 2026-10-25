@@ -6,7 +6,6 @@ Für alle, die am Code arbeiten. Was die App ist und wie man sie nutzt, steht in
 npm install
 npm run dev            # http://localhost:5173
 npm run build          # statischer Build nach dist/
-npm run pack:desktop   # Leuchtfeuer-Desktop.zip: eine Leuchtfeuer.html + Anleitung, startet per Doppelklick
 npm run typecheck      # tsc --noEmit (nicht `tsc -b`: das schreibt .js neben die Quellen)
 ```
 
@@ -173,9 +172,7 @@ der Zeit vor der Umbenennung `router.*`; sie bleiben so, damit vorhandene Chats 
   `router.roles.v1`, `router.drafts.v1`, Caches für Modelle und Benchmarks.
 - IndexedDB `router-files`: Anhänge, umgewandelte Texte, erzeugte Bilder, Videos und Audio.
 
-## Desktop-Version
+## Veröffentlichen
 
-`npm run pack:desktop` baut mit einem eigenen Vite-Plugin (`vite.config.ts`, Modus `desktop`) eine einzige
-`Leuchtfeuer.html`, in der Skript, Stile, Schriften und Symbol stecken, und packt sie mit
-`desktop/So startest du Leuchtfeuer.txt` in `Leuchtfeuer-Desktop.zip`. In Chrome und Edge bleiben Chats über
-Neustarts erhalten; ein Update ist das Ersetzen der HTML-Datei.
+Jeder Push auf `main` baut die Seite und stellt sie über GitHub Pages online (`.github/workflows/pages.yml`),
+nach etwa einer Minute unter https://chrisdefy.github.io/leuchtfeuer/.

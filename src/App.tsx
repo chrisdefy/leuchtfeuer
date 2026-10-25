@@ -1884,6 +1884,10 @@ export default function App() {
                 days: due.days,
                 onBackup: () => downloadBackup().catch((e) => setNotice({ text: (e as Error).message, error: true })),
                 onLater: () => setSettings((s) => ({ ...s, backupLater: Date.now() })),
+                onNever: () => {
+                  setSettings((s) => ({ ...s, noBackupReminder: true }));
+                  setNotice({ text: "Keine Erinnerungen mehr. Sichern kannst du jederzeit unter Einstellungen > Sicherung, dort lässt sich die Erinnerung auch wieder einschalten." });
+                },
               }
             : undefined
         }

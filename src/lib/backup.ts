@@ -103,10 +103,11 @@ const LATER_DAYS = 7;
  * Returns the days since the last backup (null = never), or undefined when no reminder is due.
  */
 export function backupDue(
-  settings: Pick<Settings, "lastBackup" | "backupLater">,
+  settings: Pick<Settings, "lastBackup" | "backupLater" | "noBackupReminder">,
   items: { messages: unknown[]; createdAt: number; updatedAt: number }[],
   now = Date.now(),
 ): { days: number | null } | undefined {
+  if (settings.noBackupReminder) return undefined;
   const used = items.filter((x) => x.messages.length);
   if (!used.length) return undefined;
   if (settings.backupLater && now - settings.backupLater < LATER_DAYS * DAY) return undefined;
