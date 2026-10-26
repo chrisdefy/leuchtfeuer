@@ -158,7 +158,7 @@ export function ProfileDialog(props: Props) {
               </label>
               <label className="check">
                 <input type="checkbox" checked={current.visualize} onChange={(e) => update({ visualize: e.target.checked })} />
-                Visualisieren an
+                Diagramme immer anbieten (sonst nur, wenn du danach fragst)
               </label>
               <label className="check">
                 <input

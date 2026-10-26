@@ -2,6 +2,7 @@ import { toTurns } from "./conversation";
 import { formatCost } from "./format";
 import { HOST, SYSTEM, roomCost, type Room } from "./rooms";
 import type { Chat } from "./storage";
+import { visualLabel } from "./visual";
 
 /** Offer a text file for download without a server. */
 export function downloadText(filename: string, text: string, type = "text/markdown") {
@@ -50,6 +51,29 @@ export function roomToMarkdown(room: Room, modelName: (id: string) => string) {
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+/**
+ * A chat as plain text for WhatsApp and other messengers: *bold* instead of **bold**, headings bold,
+ * text cards as plain text, graphics named, link targets written out.
+ */
+export function forMessenger(markdown: string) {
+  return markdown
+    .replace(/```[ \t]*([\w-]*)[^\n]*\n([\s\S]*?)(?:```|$)/g, (_, lang: string, body: string) => {
+      if (/^te?xt$/i.test(lang)) return body.trim();
+      const label = visualLabel(lang, body);
+      return label ? `[${label}]` : "```\n" + body.trimEnd() + "\n```";
+    })
+    .replace(/<svg[\s\S]*?(<\/svg>|$)/gi, "[Grafik]")
+    .replace(/^[ \t]*\|?[ \t:-]*-[ \t:-]*\|[ \t|:-]*\n/gm, "")
+    .replace(/^#{1,6}\s+(.+)$/gm, "*$1*")
+    .replace(/\*\*(.+?)\*\*/g, "*$1*")
+    .replace(/__(.+?)__/g, "*$1*")
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, text: string, url: string) => (text === url ? url : `${text} (${url})`))
+    .replace(/^\s*---\s*$/gm, "———")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 export function chatToMarkdown(chat: Chat, modelName: (id: string) => string) {

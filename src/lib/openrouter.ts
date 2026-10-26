@@ -129,6 +129,30 @@ export async function fetchFreeQuota(apiKey: string, signal?: AbortSignal): Prom
   return q && typeof q.limit === "number" ? { used: q.used, limit: q.limit, remaining: q.remaining } : null;
 }
 
+export type KeyCheck =
+  | { ok: false; reason: "invalid" | "offline" }
+  | { ok: true; balance: number | null; free: FreeQuota | null };
+
+/** Is this key good, and what can it do: balance in dollars (null if unknown) and today's free requests. */
+export async function checkKey(apiKey: string, signal?: AbortSignal): Promise<KeyCheck> {
+  let res: Response;
+  try {
+    res = await fetch(`${API}/key`, { headers: headers(apiKey), signal });
+  } catch (e) {
+    if ((e as Error).name === "AbortError") throw e;
+    return { ok: false, reason: "offline" };
+  }
+  if (res.status === 401 || res.status === 403) return { ok: false, reason: "invalid" };
+  if (!res.ok) return { ok: false, reason: "offline" };
+  const q = (await res.json()).data?.free_model_daily_requests;
+  const free = q && typeof q.limit === "number" ? { used: q.used, limit: q.limit, remaining: q.remaining } : null;
+  const balance = await fetchCredits(apiKey, signal).then(
+    (c) => c.remaining,
+    () => null,
+  );
+  return { ok: true, balance, free };
+}
+
 /** `:free` variants and the free router share the daily free-model allowance. */
 export function isFreeModelId(id: string) {
   return id.endsWith(":free") || id === "openrouter/free";

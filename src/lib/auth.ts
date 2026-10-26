@@ -14,6 +14,8 @@ const KEY_LABEL = "Leuchtfeuer";
 
 /** Credits page on OpenRouter; paying happens there, never inside the app. */
 export const CREDITS_URL = "https://openrouter.ai/settings/credits";
+/** Where keys are made by hand (checked 2026-10-26). */
+export const KEYS_URL = "https://openrouter.ai/settings/keys";
 
 export const canRedirect = () => location.protocol === "http:" || location.protocol === "https:";
 

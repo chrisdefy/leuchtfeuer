@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { NATURAL_VOICES, PREVIEW_TEXT, browserVoices, onVoicesReady, stopSpeaking, toggleSpeaking, useSpeechState } from "../lib/speech";
 import type { Settings } from "../lib/storage";
-import { CREDITS_URL } from "../lib/auth";
-import { ApiKeyField } from "./ApiKeyField";
+import { CREDITS_URL, KEYS_URL } from "../lib/auth";
+import { ApiKeyField, KeyStatus } from "./ApiKeyField";
 import { OpenRouterLogin } from "./OpenRouterLogin";
 import { Icon } from "./Icon";
 import { shortName, type Model } from "../lib/openrouter";
@@ -189,9 +189,10 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
           <details className="manual-key" open={false}>
             <summary title="Einen Key von openrouter.ai von Hand einfügen, statt dich anzumelden">API-Key selbst eingeben</summary>
             <ApiKeyField id="api-key" value={apiKey} onChange={setApiKey} />
+            <KeyStatus apiKey={apiKey} />
             <p className="hint">
               Wird nur in diesem Browser gespeichert und direkt an OpenRouter gesendet.{" "}
-              <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noreferrer">
+              <a href={KEYS_URL} target="_blank" rel="noreferrer">
                 Key erstellen
               </a>
             </p>
@@ -411,7 +412,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
               <Icon name="download" size={15} />
               {backingUp ? "Wird erstellt …" : "Sicherung herunterladen"}
             </button>
-            <button className="button small" onClick={() => restoreInput.current?.click()} title="Fehlende Chats aus einer Sicherungsdatei hinzufügen. Vorhandene bleiben unverändert.">
+            <button className="button small" onClick={() => restoreInput.current?.click()} title="Fehlende Chats aus einer Sicherungsdatei hinzufügen (vorhandene bleiben unverändert), oder einen geteilten Chat öffnen">
               <Icon name="refresh" size={15} />
               Sicherung einlesen
             </button>

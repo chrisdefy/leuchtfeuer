@@ -4762,6 +4762,30 @@ a.button {
   margin-bottom: 12px;
 }
 
+/* Pasted key, checked live: neutral while checking, aqua when it works, red when it does not. */
+.key-status {
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+  color: var(--ink-2);
+}
+
+.key-status.ok {
+  color: var(--out);
+}
+
+.key-status.bad {
+  color: var(--danger);
+}
+
+.welcome p.welcome-free {
+  margin-top: 14px;
+}
+
+.welcome p.key-status {
+  margin: 0 0 12px;
+  font-size: 0.875rem;
+}
+
 .field-label {
   display: block;
   margin-bottom: 8px;
@@ -6603,4 +6627,19 @@ fieldset.field > legend {
 
 .model-chip.static:hover {
   border-color: var(--line);
+}
+
+/* "Teilen" above a chat: drops down from the top bar instead of rising from the input bar. */
+.share-pop {
+  top: calc(100% + 8px);
+  bottom: auto;
+  right: 0;
+  left: auto;
+  width: min(22rem, calc(100vw - 32px));
+}
+
+.share-note {
+  margin: 6px 8px 4px;
+  font-size: 0.8125rem;
+  color: var(--ink-3);
 }

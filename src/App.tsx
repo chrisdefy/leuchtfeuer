@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiKeyField } from "./components/ApiKeyField";
+import { ApiKeyField, KeyStatus } from "./components/ApiKeyField";
 import { ASPECT_RATIOS, Composer, type ComposerHandle } from "./components/Composer";
 import { Icon } from "./components/Icon";
 import { Markdown } from "./components/Markdown";
@@ -29,14 +29,14 @@ import { ProfileMenu } from "./components/ProfileMenu";
 import { ProfileDialog } from "./components/ProfileDialog";
 import { Intro, introPending } from "./components/Intro";
 import { findLinks } from "./lib/links";
-import { VISUAL_GUIDE } from "./lib/visual";
+import { VISUAL_GUIDE, asksForVisual } from "./lib/visual";
 import { TEXT_GUIDE, cleanPassage, locate, passagePrompt } from "./lib/textwork";
 import { SpeechBar } from "./components/SpeechBar";
 import { OpenRouterLogin } from "./components/OpenRouterLogin";
-import { completeLogin } from "./lib/auth";
+import { KEYS_URL, completeLogin } from "./lib/auth";
 import { convertAttachment, documentBlock, sendMode } from "./lib/documents";
 import { DocumentDialog } from "./components/DocumentDialog";
-import { backupDue, backupFileName, makeBackup, mergeById, readBackup } from "./lib/backup";
+import { backupDue, backupFileName, makeBackup, makeChatFile, mergeById, readBackup } from "./lib/backup";
 import { importRoles, loadRoles } from "./lib/roleTemplate";
 import { importTemplates, loadTemplates } from "./lib/roomTemplates";
 import { stopSpeaking } from "./lib/speech";
@@ -67,7 +67,8 @@ import {
 } from "./lib/context";
 import { enhancePrompt } from "./lib/enhance";
 import { makeTitle } from "./lib/title";
-import { chatToMarkdown, downloadText, fileName } from "./lib/exporting";
+import { chatToMarkdown, downloadText, fileName, forMessenger } from "./lib/exporting";
+import { ShareMenu } from "./components/ShareMenu";
 import { bestFreeModel, cachedScores, fetchScores, type Scores } from "./lib/benchmarks";
 import {
   AttachmentError,
@@ -640,7 +641,9 @@ export default function App() {
     const targetModel = modelById.get(target);
     // Image and music models make media; guides for charts and text cards would only confuse them.
     const makesMedia = makesImages(targetModel) || makesAudio(targetModel);
-    const visual = (chat ? chat.visualize : visualOn) && !makesMedia;
+    // Charts are explained to the model when the message asks for one, or always where a profile wants it.
+    const lastAsk = history.findLast((m) => m.role === "user")?.content ?? "";
+    const visual = ((chat ? chat.visualize : visualOn) || asksForVisual(lastAsk)) && !makesMedia;
     const system = [
       settings.systemPrompt.trim(),
       chat?.prep?.system,
@@ -1235,11 +1238,6 @@ export default function App() {
     else setDraftReasoning(v);
   }
 
-  function toggleVisualize() {
-    if (activeChat) updateChat(activeChat.id, (c) => ({ ...c, visualize: !visualOn || undefined }));
-    else setDraftVisual(!visualOn);
-  }
-
   function toggleWebSearch() {
     const next = !webOn;
     if (activeChat) updateChat(activeChat.id, (c) => ({ ...c, webSearch: next }));
@@ -1505,6 +1503,7 @@ export default function App() {
   async function restoreBackup(file: File) {
     try {
       const b = await readBackup(file);
+      if (b.kind === "chat" && b.chats[0]) return openSharedChat(b.chats[0]);
       const c = mergeById(chats, b.chats);
       const r = mergeById(rooms, b.rooms);
       const f = mergeById(folders, b.folders);
@@ -1537,6 +1536,61 @@ export default function App() {
     } catch (e) {
       setNotice({ text: (e as Error).message, error: true });
     }
+  }
+
+  // ---- sharing one chat -------------------------------------------------------
+
+  async function shareChatText(chat: Chat) {
+    const text = forMessenger(chatToMarkdown(chat, modelName));
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: chat.title, text });
+      } catch (e) {
+        if ((e as Error).name !== "AbortError") setNotice({ text: "Teilen hat nicht geklappt. Versuch es noch einmal.", error: true });
+      }
+      return;
+    }
+    await navigator.clipboard.writeText(text);
+    setNotice({ text: "Chat als Text kopiert. Du kannst ihn jetzt in WhatsApp Web, eine Mail oder ein Dokument einfügen." });
+  }
+
+  async function shareChatFile(chat: Chat) {
+    const { blob, missing } = await makeChatFile(chat);
+    const name = fileName(chat.title).replace(/\.md$/, ".json");
+    const file = new File([blob], name, { type: "application/json" });
+    // Phones offer the file to WhatsApp and co. where they can; otherwise it is downloaded.
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: chat.title });
+        return;
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return;
+      }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    setNotice({
+      text: `Gespeichert als „${name}“ im Download-Ordner. Öffnen in Leuchtfeuer: Einstellungen → Sicherung → „Sicherung einlesen“.${missing ? ` ${count(missing, "Datei fehlte", "Dateien fehlten")} schon vorher.` : ""}`,
+    });
+  }
+
+  /** A chat someone shared as a file: opened right away; a changed version of one already here comes in as a copy. */
+  function openSharedChat(chat: Chat) {
+    const here = chats.find((c) => c.id === chat.id);
+    setSettingsOpen(false);
+    if (here && here.updatedAt === chat.updatedAt) {
+      openChat(here.id);
+      setNotice({ text: `„${here.title}“ ist schon da und wurde geöffnet.` });
+      return;
+    }
+    const added: Chat = here ? { ...chat, id: uid(), title: `${chat.title} (Kopie)`, folderId: undefined } : { ...chat, folderId: undefined };
+    setChats((cs) => [added, ...cs]);
+    openChat(added.id);
+    setNotice({ text: `Chat „${added.title}“ geöffnet.` });
   }
 
   // ---- chats ----------------------------------------------------------------
@@ -2082,18 +2136,16 @@ export default function App() {
             )}
           </div>
           <div className="topbar-end">
+            {activeChat && activeChat.messages.length > 0 && !chatStreaming && (
+              <ShareMenu
+                simple={simple}
+                onShareText={() => void shareChatText(activeChat)}
+                onChatFile={() => void shareChatFile(activeChat).catch((e) => setNotice({ text: (e as Error).message, error: true }))}
+                onMarkdown={() => downloadText(fileName(activeChat.title), chatToMarkdown(activeChat, modelName))}
+              />
+            )}
             {!simple && (
             <>
-            {activeChat && activeChat.messages.length > 0 && (
-              <button
-                className="ghost icon-only export-chat"
-                onClick={() => downloadText(fileName(activeChat.title), chatToMarkdown(activeChat, modelName))}
-                title="Chat als Textdatei (Markdown) herunterladen"
-                aria-label="Chat exportieren"
-              >
-                <Icon name="download" size={17} />
-              </button>
-            )}
             {activeChat && models && activeChat.messages.some((m) => m.role === "assistant" && m.content) && !chatStreaming && (
               <button
                 className="ghost small summarize-chat"
@@ -2128,7 +2180,8 @@ export default function App() {
               <h1>Ein Fenster zu jedem Modell auf OpenRouter.</h1>
               <p>
                 Melde dich mit deinem OpenRouter-Konto an. Noch keins? Bei der Anmeldung kannst du eins anlegen, zum
-                Beispiel mit deinem Google-Konto. Viele Modelle sind kostenlos.
+                Beispiel mit deinem Google-Konto. Einen Key musst du dabei nicht kopieren, Leuchtfeuer bekommt ihn
+                automatisch.
               </p>
               <OpenRouterLogin
                 primary
@@ -2137,6 +2190,10 @@ export default function App() {
                   setNotice({ text: "Mit OpenRouter verbunden. Du kannst loslegen." });
                 }}
               />
+              <p className="hint welcome-free">
+                Kostenlos starten: Ohne Guthaben gehen die kostenlosen Modelle, derzeit bis zu 50 Anfragen am Tag. Für
+                stärkere Modelle lädst du später bei OpenRouter Guthaben auf.
+              </p>
               <details className="welcome-manual">
                 <summary title="Einen vorhandenen Key von openrouter.ai einfügen, statt dich anzumelden">Ich habe schon einen API-Key</summary>
               <form
@@ -2154,7 +2211,14 @@ export default function App() {
                   Key speichern
                 </button>
               </form>
-                <p className="hint">Er bleibt in diesem Browser und geht nur an OpenRouter.</p>
+                <KeyStatus apiKey={onboardingKey} />
+                <p className="hint">
+                  Den Key findest du auf openrouter.ai unter{" "}
+                  <a href={KEYS_URL} target="_blank" rel="noreferrer">
+                    Keys
+                  </a>{" "}
+                  („Create Key“, dann kopieren). Er bleibt in diesem Browser und geht nur an OpenRouter.
+                </p>
               </details>
             </section>
           ) : turns.length === 0 && !activeChat?.seed && !activeChat?.prep ? (
@@ -2397,8 +2461,6 @@ export default function App() {
               ) : undefined
             }
             onReasoning={canThink && !videoLane && !textLane && !createKind && !simple ? changeReasoning : undefined}
-            visualize={visualOn}
-            onToggleVisualize={simple || createKind || videoLane || imageLanes.length === lanes.length ? undefined : toggleVisualize}
             aspectRatio={createKind === "image" || (!createKind && imageLanes.length) ? aspectRatio : null}
             onAspectRatio={setAspectRatio}
             onVideo={

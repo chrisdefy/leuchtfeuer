@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { wavFromPcm16 } from "./files";
 import { newestOf } from "./helpers";
+import { visualLabel } from "./visual";
 
 /**
  * Reading answers aloud. The browser's own voice is free and instant; the natural voice
@@ -111,27 +112,8 @@ export function useNowSpeaking() {
 
 /** What a code block becomes when read: text cards are read, pictures and code are only named. */
 function spokenBlock(lang: string, body: string) {
-  switch (lang.toLowerCase()) {
-    case "text":
-    case "txt":
-      return `\n\n${body}\n\n`;
-    case "chart": {
-      let title = "";
-      try {
-        title = String(JSON.parse(body)?.title ?? "");
-      } catch {
-        /* half a chart */
-      }
-      return title ? `\n\n(Diagramm: ${title})\n\n` : "\n\n(Diagramm)\n\n";
-    }
-    case "svg":
-      return "\n\n(Grafik)\n\n";
-    case "mermaid":
-    case "flow":
-      return "\n\n(Ablaufdiagramm)\n\n";
-    default:
-      return "\n\n(Codebeispiel ausgelassen)\n\n";
-  }
+  if (/^te?xt$/i.test(lang)) return `\n\n${body}\n\n`;
+  return `\n\n(${visualLabel(lang, body) ?? "Codebeispiel ausgelassen"})\n\n`;
 }
 
 /** A Markdown table, read row by row: "Löwe, Größe 2 m, Gewicht 190 kg." instead of pipes and dashes. */

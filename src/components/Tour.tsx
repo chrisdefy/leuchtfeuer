@@ -147,7 +147,7 @@ export const CHAT_TOUR: TourStep[] = [
   {
     target: ".composer-tools",
     title: "Werkzeuge",
-    text: "Erzeugen: ein Bild, ein Video oder Musik direkt hier im Chat. Anhang: Fotos, PDFs, Word und Excel. Websuche: aktuelle Infos aus dem Internet. Visualisieren: Diagramme und Abläufe.",
+    text: "Erzeugen: ein Bild, ein Video oder Musik direkt hier im Chat. Anhang: Fotos, PDFs, Word und Excel. Websuche: aktuelle Infos aus dem Internet. Diagramme und Abläufe zeichnet das Modell, wenn du danach fragst.",
   },
   {
     target: ".msg.assistant .msg-actions",

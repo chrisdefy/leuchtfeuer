@@ -17,6 +17,8 @@ const VERSION = 1;
 export interface Backup {
   app: typeof APP;
   version: number;
+  /** "chat": one chat shared on its own (opened, not restored); missing in full backups. */
+  kind?: "chat";
   createdAt: number;
   chats: Chat[];
   rooms: Room[];
@@ -55,6 +57,11 @@ export async function makeBackup(data: Omit<Backup, "app" | "version" | "created
   return { blob: new Blob([JSON.stringify(backup)], { type: "application/json" }), files: Object.keys(files).length, missing };
 }
 
+/** One chat as a file that Leuchtfeuer opens again, with its pictures and documents. */
+export function makeChatFile(chat: Chat) {
+  return makeBackup({ kind: "chat", chats: [chat], rooms: [], folders: [], roles: [], templates: [], settings: {} as Backup["settings"] });
+}
+
 export function backupFileName() {
   return `Leuchtfeuer-Sicherung-${new Date().toISOString().slice(0, 10)}.json`;
 }
@@ -75,6 +82,7 @@ export async function readBackup(file: File): Promise<Backup> {
   const list = <T>(v: unknown) => (Array.isArray(v) ? (v as T[]) : []);
   return {
     app: APP,
+    kind: parsed.kind === "chat" ? "chat" : undefined,
     version: parsed.version ?? VERSION,
     createdAt: parsed.createdAt ?? 0,
     chats: list<Chat>(parsed.chats),

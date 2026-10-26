@@ -23,6 +23,7 @@ const PATHS: Record<string, string> = {
   film: "M4 5h16v14H4zM8 5v14M16 5v14M4 9h4M4 15h4M16 9h4M16 15h4",
   file: "M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Zm0 0v5h5M9 13h6M9 17h6",
   download: "M12 4v11m-5-5 5 5 5-5M5 20h14",
+  share: "M12 15V3M8 7l4-4 4 4M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7",
   play: "M8 5v14l11-7z",
   help: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm-2.6-11.6a2.6 2.6 0 1 1 3.7 2.4c-.7.3-1.1.9-1.1 1.7V14m0 3.2v.3",
   summary: "M5 5h14M5 10h14M5 15h8M16 15l2 2 3-4",

@@ -4,8 +4,13 @@
  * ```svg → a sketch shown as an image (no scripts run).
  */
 
-/** Added to the system prompt while the switch is on in a chat. */
-export const VISUAL_GUIDE = `Visualisieren ist eingeschaltet. Wenn eine Grafik beim Verstehen hilft (Vergleiche, Anteile, Entwicklungen, Abläufe, einfache Skizzen), füge sie direkt in die Antwort ein und sag im Text in einem Satz, was sie zeigt. Erfinde keine Zahlen: nutze nur Werte, die du sicher kennst oder die im Gespräch stehen, und kennzeichne Schätzungen.
+/** A message that asks for a picture of something: diagram, chart, sketch, flow (parts of words count: "Kreisdiagramm"). */
+const VISUAL_ASK = /diagramm|grafik|graphik|schaubild|chart|skizz|zeichne|zeichnung|visualisier|veranschaulich|ablauf|abläufe|flowchart|mindmap|svg|diagram|graph\b|draw|sketch|visuali[sz]/i;
+
+export const asksForVisual = (text: string) => VISUAL_ASK.test(text);
+
+/** Added to the system prompt when the message asks for a picture, or always in chats whose profile wants it. */
+export const VISUAL_GUIDE = `Du kannst Grafiken in deine Antworten einbauen. Wenn eine Grafik beim Verstehen hilft (Vergleiche, Anteile, Entwicklungen, Abläufe, einfache Skizzen), füge sie direkt in die Antwort ein und sag im Text in einem Satz, was sie zeigt. Erfinde keine Zahlen: nutze nur Werte, die du sicher kennst oder die im Gespräch stehen, und kennzeichne Schätzungen.
 
 Diagramm: ein Codeblock mit der Sprache chart, darin nur JSON in dieser Form:
 {"type":"bar","title":"Kurzer Titel","unit":"€","labels":["A","B","C"],"series":[{"name":"Reihe 1","values":[12,30,18]}]}
@@ -68,6 +73,28 @@ export function parseChart(code: string): ChartSpec | null {
     labels: labels.slice(0, n),
     series: type === "pie" ? series.slice(0, 1) : series,
   };
+}
+
+/** What a code block of this language shows, in words ("Diagramm: Umsatz"); null for text and code. */
+export function visualLabel(lang: string, code: string): string | null {
+  switch (lang.toLowerCase()) {
+    case "chart": {
+      let title = "";
+      try {
+        title = String(JSON.parse(code)?.title ?? "");
+      } catch {
+        /* half a chart */
+      }
+      return title ? `Diagramm: ${title}` : "Diagramm";
+    }
+    case "svg":
+      return "Grafik";
+    case "mermaid":
+    case "flow":
+      return "Ablaufdiagramm";
+    default:
+      return null;
+  }
 }
 
 /** An SVG sketch is shown only if it really is one; as an <img> nothing inside it can run. */

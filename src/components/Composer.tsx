@@ -37,8 +37,6 @@ interface Props {
   reasoning?: "low" | "high";
   onReasoning?: (v: "low" | "high" | undefined) => void;
   /** Charts and sketches in answers; hidden where it makes no sense (video). */
-  visualize?: boolean;
-  onToggleVisualize?: () => void;
   /** Set when the model generates images: the chosen aspect ratio. */
   aspectRatio: string | null;
   onAspectRatio: (r: string) => void;
@@ -175,23 +173,6 @@ export const Composer = forwardRef<ComposerHandle, Props>(function Composer(prop
             <Icon name="globe" size={17} />
             <span className="tool-label">Websuche</span>
           </button>
-          )}
-          {props.onToggleVisualize && (
-            <button
-              type="button"
-              className="tool"
-              aria-pressed={!!props.visualize}
-              onClick={props.onToggleVisualize}
-              disabled={props.disabled}
-              title={
-                props.visualize
-                  ? "Visualisieren ist an: Das Modell zeichnet Diagramme und Skizzen, wo sie helfen. Klicken zum Ausschalten."
-                  : "Das Modell darf Antworten mit Diagrammen und Skizzen veranschaulichen."
-              }
-            >
-              <Icon name="chart" size={17} />
-              <span className="tool-label">Visualisieren</span>
-            </button>
           )}
           {props.onEnhance && (
             <button

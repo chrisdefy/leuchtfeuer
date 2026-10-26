@@ -18,7 +18,7 @@ export function profileSummary(p: Profile) {
   const parts = [
     p.level && LEVEL_OPTIONS.find((o) => o.value === p.level)?.label,
     p.web && "Websuche",
-    p.visualize && "Visualisieren",
+    p.visualize && "Diagramme",
     p.reasoning && `Nachdenken ${p.reasoning === "high" ? "gründlich" : "kurz"}`,
   ].filter(Boolean);
   return parts.length ? parts.join(" · ") : "nur Anweisung";
