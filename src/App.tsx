@@ -18,7 +18,7 @@ import {
 } from "./components/VideoDialog";
 import { Sidebar, chatCost, type Mode } from "./components/Sidebar";
 import { SignalField } from "./components/SignalField";
-import { CHAT_TOUR, ROOM_TOUR, Tour } from "./components/Tour";
+import { CHAT_TOUR, ROOM_TOUR, SIMPLE_CHAT_TOUR, Tour } from "./components/Tour";
 import { TierMenu } from "./components/TierMenu";
 import { CreateButton, MediaModeBar } from "./components/CreateMenu";
 import { MEDIA_INFO, mediaLevels, type MediaKind } from "./lib/media";
@@ -321,6 +321,28 @@ export default function App() {
     (patch: Partial<Settings>) => setSettings((s) => ({ ...s, ...patch })),
     [setSettings],
   );
+
+  // Simple view: chats only, levels instead of models, no costs. Rooms, folders and profiles keep working out of sight.
+  const simple = settings.view === "simple";
+  useEffect(() => {
+    if (simple) setCreateState(null);
+  }, [simple]);
+  useEffect(() => {
+    if (simple && mode === "rooms") {
+      stopSpeaking();
+      setMode("chats");
+    }
+  }, [simple, mode]);
+
+  function setSimple(on: boolean) {
+    if (on === simple) return;
+    patchSettings({ view: on ? "simple" : "full" });
+    setNotice({
+      text: on
+        ? "Einfache Ansicht: Nur das Wichtigste ist zu sehen. Mit „Alles“ ist der Rest sofort wieder da."
+        : "Alles ist wieder zu sehen: Chatrooms, Ordner, Vergleichen, alle Modelle und Kosten.",
+    });
+  }
 
   // ---- data loading -------------------------------------------------------
 
@@ -1768,8 +1790,9 @@ export default function App() {
         }}
         onFork={!chatStreaming && m.content && !m.video ? () => forkAt(m.id) : undefined}
         onSummarize={!chatStreaming && m.content && !m.video && models ? () => summarizeUpTo(m.id) : undefined}
-        onEditPassage={activeChat && m.content && !m.video && settings.apiKey ? (marked, how) => editPassage(activeChat.id, m.id, marked, how) : undefined}
+        onEditPassage={activeChat && m.content && !m.video && settings.apiKey && !simple ? (marked, how) => editPassage(activeChat.id, m.id, marked, how) : undefined}
         onUndoEdit={activeChat && m.revisions?.length ? () => undoEdit(activeChat.id, m.id) : undefined}
+        simple={simple}
       />
     ));
     // Branches that start at one of these answers, shown right below it.
@@ -1915,6 +1938,8 @@ export default function App() {
           setSidebarOpen(false);
         }}
         onTour={settings.apiKey && models ? (mode === "rooms" ? startRoomTour : startTour) : undefined}
+        simple={simple}
+        onSimple={setSimple}
       />
       <div className="scrim" onClick={() => setSidebarOpen(false)} aria-hidden="true" />
 
@@ -1989,6 +2014,14 @@ export default function App() {
               const m = modelById.get(id);
               return (
                 <div className="lane-chip" key={`${id}-${i}`}>
+                  {simple ? (
+                    // The level menu in the input bar is the way to change it here.
+                    <span className="model-chip static" title="Dieses Modell antwortet dir. Wechseln kannst du unten über die Stufe.">
+                      <span className="chip-name">
+                        {fusionOn ? "Beste Antwort" : m ? shortName(m) : videoById.get(id) ? videoName(videoById.get(id)!) : id}
+                      </span>
+                    </span>
+                  ) : (
                   <button
                     className="model-chip"
                     onClick={() => setPicker({ kind: "replace", lane: i })}
@@ -2021,11 +2054,13 @@ export default function App() {
                     )}
                     <Icon name="chevron" size={16} />
                   </button>
+                  )}
                   {comparing && (
                     <button
                       className="ghost lane-remove"
                       onClick={() => dropLane(i)}
                       aria-label={`${m ? shortName(m) : id} aus dem Vergleich entfernen`}
+                      title="Aus dem Vergleich entfernen"
                     >
                       <Icon name="close" size={14} />
                     </button>
@@ -2033,11 +2068,12 @@ export default function App() {
                 </div>
               );
             })}
-            {lanes.length < MAX_LANES && !videoLane && (
+            {lanes.length < MAX_LANES && !videoLane && !simple && (
               <button
                 className="ghost compare-add"
                 onClick={() => setPicker({ kind: "add" })}
                 aria-label={comparing ? "Modell zum Vergleich hinzufügen" : "Mit weiteren Modellen vergleichen"}
+                title={comparing ? "Noch ein Modell zum Vergleich dazunehmen" : "Dieselbe Frage mehreren Modellen stellen und die Antworten nebeneinander sehen"}
               >
                 <Icon name="plus" size={16} />
                 <span className="compare-add-label">{comparing ? "Modell" : "Vergleichen"}</span>
@@ -2045,6 +2081,8 @@ export default function App() {
             )}
           </div>
           <div className="topbar-end">
+            {!simple && (
+            <>
             {activeChat && activeChat.messages.length > 0 && (
               <button
                 className="ghost icon-only export-chat"
@@ -2070,6 +2108,8 @@ export default function App() {
               <span className="chat-total" title="Kosten dieses Chats">
                 {formatCost(totalCost)}
               </span>
+            )}
+            </>
             )}
           </div>
         </header>
@@ -2316,15 +2356,17 @@ export default function App() {
                   current={lanes[0]}
                   onPick={pickTier}
                   fusion={
-                    team.length > 1
+                    team.length > 1 && !simple
                       ? { on: fusionOn, team: team.map((id) => modelById.get(id)!), cost: teamCost, onPick: pickFusion }
                       : undefined
                   }
                   reasoning={reasoning}
-                  onReasoning={canThink ? changeReasoning : undefined}
-                  onAllModels={() => setPicker({ kind: "replace", lane: 0 })}
+                  onReasoning={canThink && !simple ? changeReasoning : undefined}
+                  onAllModels={simple ? undefined : () => setPicker({ kind: "replace", lane: 0 })}
                   disabled={chatStreaming}
                 />
+                {!simple && (
+                <>
                 <ProfileMenu
                   profiles={profiles}
                   current={profileId}
@@ -2341,11 +2383,13 @@ export default function App() {
                   disabled={chatStreaming}
                 />
                 </>
+                )}
+                </>
               ) : undefined
             }
-            onReasoning={canThink && !videoLane && !textLane && !createKind ? changeReasoning : undefined}
+            onReasoning={canThink && !videoLane && !textLane && !createKind && !simple ? changeReasoning : undefined}
             visualize={visualOn}
-            onToggleVisualize={createKind || videoLane || imageLanes.length === lanes.length ? undefined : toggleVisualize}
+            onToggleVisualize={simple || createKind || videoLane || imageLanes.length === lanes.length ? undefined : toggleVisualize}
             aspectRatio={createKind === "image" || (!createKind && imageLanes.length) ? aspectRatio : null}
             onAspectRatio={setAspectRatio}
             onVideo={
@@ -2371,7 +2415,7 @@ export default function App() {
             }
             showWebSearch={!videoLane && !createKind}
             onEnhance={imagePrompt && !createKind ? enhanceDraft : undefined}
-            onPrepare={!activeChat?.messages.length && !imagePrompt && !videoLane && !createKind && !comparing && models ? openWorkbench : undefined}
+            onPrepare={!simple && !activeChat?.messages.length && !imagePrompt && !videoLane && !createKind && !comparing && models ? openWorkbench : undefined}
             enhancing={enhancing}
             apiKey={settings.apiKey}
             onDictated={(spoken) => {
@@ -2387,7 +2431,13 @@ export default function App() {
           />
           {!activeChat?.messages.length && (
             <p className="composer-hint">
-              <kbd>Enter</kbd> senden, <kbd>Shift</kbd>+<kbd>Enter</kbd> neue Zeile, <kbd>⌘K</kbd> Modell wechseln, Mikrofon: sprechen statt tippen
+              <kbd>Enter</kbd> senden, <kbd>Shift</kbd>+<kbd>Enter</kbd> neue Zeile,{" "}
+              {!simple && (
+                <>
+                  <kbd>⌘K</kbd> Modell wechseln,{" "}
+                </>
+              )}
+              Mikrofon: sprechen statt tippen
             </p>
           )}
         </div>
@@ -2523,7 +2573,7 @@ export default function App() {
       {tour && (
         <Tour
           key={tour}
-          steps={tour === "room" ? ROOM_TOUR : CHAT_TOUR}
+          steps={tour === "room" ? ROOM_TOUR : simple ? SIMPLE_CHAT_TOUR : CHAT_TOUR}
           onEnd={endTour}
           // On phones the sidebar is a drawer: open it for the steps that point into it.
           onStep={(s) => {

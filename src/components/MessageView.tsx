@@ -31,6 +31,8 @@ interface Props {
   onEditPassage?: (marked: string, instruction: string) => Promise<string>;
   /** Undo the last passage edit. */
   onUndoEdit?: () => void;
+  /** Simple view: no costs, and "Neu erzeugen" as a button instead of the "Mehr" menu. */
+  simple?: boolean;
 }
 
 export function MessageView(props: Props) {
@@ -83,7 +85,7 @@ export function MessageView(props: Props) {
         ) : (
           <span className="by-model">{m.modelLabel ?? (m.model ? modelName(m.model) : "Modell")}</span>
         )}
-        {m.usage && (
+        {m.usage && !props.simple && (
           <span
             className="by-usage"
             title={m.video ? undefined : `${formatTokens(m.usage.promptTokens)} Tokens gelesen, ${formatTokens(m.usage.completionTokens)} geschrieben`}
@@ -177,7 +179,13 @@ export function MessageView(props: Props) {
               {speech === "loading" ? "Lädt …" : speech ? "Stopp" : "Vorlesen"}
             </button>
           )}
-          {(props.onSummarize || props.onFork || (canRegenerate && !m.video)) && (
+          {props.simple && canRegenerate && !m.video && (
+            <button className="ghost small" onClick={onRegenerate} title="Diese Antwort neu schreiben lassen">
+              <Icon name="refresh" size={14} />
+              Neu erzeugen
+            </button>
+          )}
+          {!props.simple && (props.onSummarize || props.onFork || (canRegenerate && !m.video)) && (
             <MoreMenu>
               {props.onSummarize && (
                 <button

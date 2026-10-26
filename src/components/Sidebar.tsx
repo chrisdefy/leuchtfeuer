@@ -40,6 +40,9 @@ interface Props {
   onTour?: () => void;
   /** Set when a backup is due: days since the last one (null = never). */
   backupReminder?: { days: number | null; onBackup: () => void; onLater: () => void; onNever: () => void };
+  /** Simple view: only chats, no folders, no costs per chat. */
+  simple: boolean;
+  onSimple: (simple: boolean) => void;
 }
 
 export function chatCost(chat: Chat) {
@@ -55,7 +58,10 @@ const LOW_CREDIT = 0.5;
 
 export function Sidebar(props: Props) {
   const rooms = props.mode === "rooms";
-  const folderIds = new Set(props.folders.map((f) => f.id));
+  const simple = props.simple;
+  // Simple view: chats sorted into folders simply stand in the list.
+  const folders = simple ? [] : props.folders;
+  const folderIds = new Set(folders.map((f) => f.id));
   const sorted = [...props.items].sort((a, b) => b.updatedAt - a.updatedAt);
   const loose = sorted.filter((i) => !i.folderId || !folderIds.has(i.folderId));
   const sections: { label: string; items: ListItem[] }[] = [];
@@ -132,7 +138,7 @@ export function Sidebar(props: Props) {
       <li
         key={c.id}
         className={c.id === props.activeId ? "active" : undefined}
-        draggable
+        draggable={!simple}
         onDragStart={(e) => {
           e.dataTransfer.setData(DRAG_TYPE, c.id);
           e.dataTransfer.effectAllowed = "move";
@@ -144,34 +150,38 @@ export function Sidebar(props: Props) {
           onClick={() => props.onSelect(c.id)}
           onDoubleClick={() => setRenaming({ id: c.id, value: c.title })}
           aria-current={c.id === props.activeId ? "page" : undefined}
-          title={`${c.title} (Doppelklick zum Umbenennen, ziehen zum Einsortieren)`}
+          title={simple ? `${c.title} (Doppelklick zum Umbenennen)` : `${c.title} (Doppelklick zum Umbenennen, ziehen zum Einsortieren)`}
         >
           <span className="chat-title">{c.title}</span>
-          {c.cost > 0 && <span className="chat-cost">{formatCost(c.cost)}</span>}
+          {c.cost > 0 && !simple && <span className="chat-cost">{formatCost(c.cost)}</span>}
         </button>
         <span className="row-actions">
-          <button
-            className="chat-delete chat-move"
-            aria-label={`„${c.title}“ in einen Ordner verschieben`}
-            aria-expanded={moving === c.id}
-            onClick={() => setMoving(moving === c.id ? null : c.id)}
-          >
-            <Icon name="folder" size={14} />
-          </button>
+          {!simple && (
+            <button
+              className="chat-delete chat-move"
+              aria-label={`„${c.title}“ in einen Ordner verschieben`}
+              title="In einen Ordner verschieben"
+              aria-expanded={moving === c.id}
+              onClick={() => setMoving(moving === c.id ? null : c.id)}
+            >
+              <Icon name="folder" size={14} />
+            </button>
+          )}
           <button
             className="chat-delete chat-rename"
             aria-label={`„${c.title}“ umbenennen`}
+            title="Umbenennen"
             onClick={() => setRenaming({ id: c.id, value: c.title })}
           >
             <Icon name="edit" size={14} />
           </button>
-          <button className="chat-delete" aria-label={`„${c.title}“ löschen`} onClick={() => props.onDelete(c.id)}>
+          <button className="chat-delete" aria-label={`„${c.title}“ löschen`} title="Löschen" onClick={() => props.onDelete(c.id)}>
             <Icon name="trash" size={15} />
           </button>
         </span>
         {moving === c.id && (
           <MoveMenu
-            folders={props.folders}
+            folders={folders}
             current={c.folderId && folderIds.has(c.folderId) ? c.folderId : null}
             onPick={(folderId) => {
               props.onMove(c.id, folderId);
@@ -189,7 +199,7 @@ export function Sidebar(props: Props) {
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${simple ? " simple" : ""}`}>
       <div className="sidebar-head">
         <span className="wordmark" aria-label="Leuchtfeuer">
           <BeaconMark size={24} id="wordmark" />
@@ -207,6 +217,7 @@ export function Sidebar(props: Props) {
         </button>
       </div>
 
+      {!simple && (
       <div className="mode-switch" role="tablist" aria-label="Bereich">
         <button role="tab" aria-selected={!rooms} onClick={() => props.onMode("chats")} title="Deine Unterhaltungen mit einzelnen Modellen">
           Chats
@@ -215,8 +226,10 @@ export function Sidebar(props: Props) {
           Chatrooms
         </button>
       </div>
+      )}
 
       <nav className="chat-list" aria-label={rooms ? "Chatrooms" : "Chats"}>
+        {!simple && (
         <section className="folders">
           <div className="list-head">
             <h2 className="list-label">Ordner</h2>
@@ -239,11 +252,11 @@ export function Sidebar(props: Props) {
               }}
             />
           )}
-          {props.folders.length === 0 && creating === null && (
+          {folders.length === 0 && creating === null && (
             <p className="sidebar-empty folder-empty">Lege Ordner an und ziehe {rooms ? "Räume" : "Chats"} hinein.</p>
           )}
           <ul>
-            {props.folders.map((f) => {
+            {folders.map((f) => {
               const inside = sorted.filter((i) => i.folderId === f.id);
               return (
                 <li key={f.id} className={`folder${dropOver === f.id ? " drop-over" : ""}`} {...dropZone(f.id)}>
@@ -306,6 +319,7 @@ export function Sidebar(props: Props) {
             })}
           </ul>
         </section>
+        )}
 
         <div className={`loose${dropOver === LOOSE ? " drop-over" : ""}`} {...dropZone(LOOSE)}>
           {sorted.length === 0 && (
@@ -324,6 +338,7 @@ export function Sidebar(props: Props) {
       </nav>
 
       <div className="sidebar-foot">
+        <ViewSwitch simple={simple} onChange={props.onSimple} />
         <div className="foot-links">
           <button className="ghost settings-link" onClick={props.onOpenSettings} title="API-Key, Standardmodell, Vorlesen, Diktat und Systemanweisung">
             <Icon name="settings" />
@@ -366,6 +381,25 @@ export function Sidebar(props: Props) {
         )}
       </div>
     </aside>
+  );
+}
+
+/** One click between the simple view for beginners and the full one; nothing is lost either way. */
+function ViewSwitch(props: { simple: boolean; onChange: (simple: boolean) => void }) {
+  return (
+    <div
+      className="view-switch"
+      role="radiogroup"
+      aria-label="Ansicht"
+      title="Einfach zeigt nur das Wichtigste. Nichts geht verloren: Mit „Alles“ ist sofort wieder alles da."
+    >
+      <button role="radio" aria-checked={props.simple} onClick={() => props.onChange(true)}>
+        Einfach
+      </button>
+      <button role="radio" aria-checked={!props.simple} onClick={() => props.onChange(false)}>
+        Alles
+      </button>
+    </div>
   );
 }
 

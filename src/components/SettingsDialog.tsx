@@ -46,6 +46,10 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
   const [systemVoices, setSystemVoices] = useState(browserVoices);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const preview = useSpeechState("settings-preview");
+  // The simple view shows the everyday settings; the rest is one click away.
+  const simple = settings.view === "simple";
+  const [showAll, setShowAll] = useState(false);
+  const full = !simple || showAll;
 
   useEffect(() => onVoicesReady(() => setSystemVoices(browserVoices())), []);
   useEffect(() => () => stopSpeaking(), []);
@@ -81,7 +85,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
       >
         <header className="dialog-head">
           <h2 id="settings-title">Einstellungen</h2>
-          <button className="ghost icon-only" onClick={onClose} aria-label="Schließen">
+          <button className="ghost icon-only" onClick={onClose} aria-label="Schließen" title="Schließen ohne zu speichern">
             <Icon name="close" />
           </button>
         </header>
@@ -114,7 +118,19 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
             />
           </fieldset>
         </div>
-        <p className="hint">Beides gilt sofort, ohne Speichern.</p>
+        <fieldset className="field view-field" title="Einfach zeigt nur das Wichtigste. Nichts geht verloren.">
+          <legend>Ansicht</legend>
+          <Segmented
+            name="view"
+            value={settings.view ?? "full"}
+            options={[
+              ["simple", "Einfach: nur das Wichtigste"],
+              ["full", "Alles"],
+            ]}
+            onChange={(view) => onSave({ view })}
+          />
+          <p className="hint">Alle drei gelten sofort, ohne Speichern.</p>
+        </fieldset>
 
         <div className="field">
           <span className="field-label">Einführung</span>
@@ -125,10 +141,12 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
                 <Icon name="help" size={15} />
                 Chats
               </button>
-              <button className="button small" onClick={onRoomTour}>
-                <Icon name="help" size={15} />
-                Chatrooms
-              </button>
+              {!simple && (
+                <button className="button small" onClick={onRoomTour}>
+                  <Icon name="help" size={15} />
+                  Chatrooms
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -180,6 +198,8 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
           </details>
         </div>
 
+        {full && (
+        <>
         <fieldset className="field radio-group">
           <legend>Modell für neue Chats</legend>
           <label className="check">
@@ -265,6 +285,8 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
             Anzahl selbst.
           </p>
         </fieldset>
+        </>
+        )}
 
         <fieldset className="field radio-group">
           <legend>Vorlesen</legend>
@@ -326,6 +348,8 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
           {previewError && <p className="hint error-text">{previewError}</p>}
         </fieldset>
 
+        {full && (
+        <>
         <div className="field">
           <label htmlFor="system-prompt">Systemanweisung</label>
           <textarea
@@ -363,6 +387,8 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
             )}
           </div>
         </div>
+        </>
+        )}
 
         <fieldset className="field radio-group">
           <legend>Sicherung</legend>
@@ -405,6 +431,16 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
             An eine Sicherung erinnern, wenn die letzte über 4 Wochen her ist
           </label>
         </fieldset>
+
+        {!full && (
+          <button
+            className="link-button show-all-settings"
+            onClick={() => setShowAll(true)}
+            title="Modelle hinter den Stufen, Datenschutz, Profile, Systemanweisung und mehr"
+          >
+            Alle Einstellungen zeigen
+          </button>
+        )}
 
         <footer className="dialog-foot">
           <button className="button" onClick={onClose}>

@@ -328,6 +328,11 @@ kbd {
   background: var(--surface);
 }
 
+/* Without the Chats/Chatrooms switch. */
+.sidebar.simple {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
 .sidebar-head {
   display: flex;
   align-items: center;
@@ -2330,6 +2335,10 @@ kbd {
   margin-top: 0;
 }
 
+.dialog .view-field {
+  margin-top: 16px;
+}
+
 input[type="radio"],
 input[type="checkbox"] {
   width: 18px;
@@ -3566,6 +3575,30 @@ input[type="checkbox"] {
 }
 
 .mode-switch button[aria-selected="true"] {
+  background: var(--raised);
+  color: var(--ink);
+  box-shadow: 0 1px 2px rgb(20 26 34 / 0.08);
+}
+
+/* Einfach | Alles, in the sidebar foot; drawn like the Chats/Chatrooms switch. */
+.view-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 4px 0 2px;
+  padding: 3px;
+  border-radius: var(--r-md);
+  background: var(--line-soft);
+}
+
+.view-switch button {
+  height: 28px;
+  border-radius: var(--r-sm);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.view-switch button[aria-checked="true"] {
   background: var(--raised);
   color: var(--ink);
   box-shadow: 0 1px 2px rgb(20 26 34 / 0.08);
@@ -6556,4 +6589,18 @@ fieldset.field > legend {
 
 .rs-template .dialog-buttons {
   justify-content: flex-end;
+}
+
+.show-all-settings {
+  display: block;
+  margin-top: 20px;
+}
+
+/* Simple view: the model is named, not picked here; the level menu below changes it. */
+.model-chip.static {
+  cursor: default;
+}
+
+.model-chip.static:hover {
+  border-color: var(--line);
 }

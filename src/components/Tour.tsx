@@ -184,6 +184,12 @@ export const CHAT_TOUR: TourStep[] = [
     text: "Hier siehst du dein Guthaben und wie viele kostenlose Anfragen heute noch übrig sind. Jede Antwort zeigt außerdem, was sie gekostet hat.",
   },
   {
+    target: ".view-switch",
+    inSidebar: true,
+    title: "Einfach oder Alles",
+    text: "Zu viele Knöpfe? „Einfach“ zeigt nur das Wichtigste: Chats, Stufe, Anhang, Websuche und Diktieren. Nichts geht verloren, mit „Alles“ ist der Rest sofort wieder da.",
+  },
+  {
     target: ".settings-link",
     inSidebar: true,
     title: "Einstellungen",
@@ -192,6 +198,56 @@ export const CHAT_TOUR: TourStep[] = [
   {
     title: "Fertig!",
     text: "Probier es aus: Stell deine erste Frage. Kostenlose Modelle kosten nichts, und bei allen anderen siehst du den Preis vorher.",
+  },
+];
+
+/** The same tour for the simple view: only what is on screen there. */
+export const SIMPLE_CHAT_TOUR: TourStep[] = [
+  {
+    title: "Willkommen bei Leuchtfeuer",
+    text: "In einer Minute zeigen wir dir das Wichtigste. Dafür haben wir einen Beispiel-Chat geöffnet; er kostet nichts und verschwindet danach wieder.",
+  },
+  {
+    target: ".composer",
+    title: "Hier fragst du",
+    text: "Tippe deine Frage und drück Enter. Wer nicht gern tippt, drückt aufs Mikrofon und spricht einfach.",
+  },
+  {
+    target: ".tier-button",
+    title: "Wie stark die KI sein soll",
+    text: "Wähl hier Kostenlos, Leicht, Standard oder Stark. Du musst keine Modelle kennen: Leuchtfeuer nimmt dafür jeweils ein aktuelles, passendes Modell. „Kostenlos“ kostet nichts.",
+  },
+  {
+    target: ".composer-tools",
+    title: "Werkzeuge",
+    text: "Anhang: Fotos, PDFs, Word und Excel mitschicken. Websuche: aktuelle Infos aus dem Internet holen.",
+  },
+  {
+    target: ".msg.assistant .msg-actions",
+    title: "Unter jeder Antwort",
+    text: "Kopieren, Vorlesen lassen oder neu schreiben lassen, wenn dir die Antwort nicht gefällt.",
+  },
+  {
+    target: ".sidebar .chat-list",
+    inSidebar: true,
+    title: "Deine Chats",
+    text: "Alle Chats bleiben auf diesem Gerät. Mit „Neu“ oben beginnst du einen neuen.",
+  },
+  {
+    target: ".view-switch",
+    inSidebar: true,
+    title: "Einfach oder Alles",
+    text: "Gerade siehst du die einfache Ansicht. Wer mehr will, klickt auf „Alles“: dann gibt es auch Chatrooms, Ordner, Vergleiche und alle Modelle. Zurück geht es genauso mit einem Klick.",
+  },
+  {
+    target: ".settings-link",
+    inSidebar: true,
+    title: "Einstellungen",
+    text: "Schriftgröße, hell oder dunkel und die Stimme zum Vorlesen. Daneben findest du diese Einführung jederzeit wieder.",
+  },
+  {
+    title: "Fertig!",
+    text: "Probier es aus: Stell deine erste Frage.",
   },
 ];
 

@@ -13,8 +13,8 @@ interface Props {
   /** Thinking effort; only when the current model can think. */
   reasoning?: "low" | "high";
   onReasoning?: (v: "low" | "high" | undefined) => void;
-  /** The full model picker, for everyone who wants to choose themselves. */
-  onAllModels: () => void;
+  /** The full model picker, for everyone who wants to choose themselves. Missing in the simple view. */
+  onAllModels?: () => void;
   /** "Beste Antwort": several models answer, the strongest merges. Missing when there is no team. */
   fusion?: { on: boolean; team: Model[]; cost: number | null; onPick: () => void };
   disabled?: boolean;
@@ -140,18 +140,20 @@ export function TierMenu(props: Props) {
               </div>
             </div>
           )}
-          <button
-            role="menuitem"
-            className="tier-all"
-            onClick={() => {
-              setOpen(false);
-              props.onAllModels();
-            }}
-          >
-            <Icon name="search" size={15} />
-            Alle Modelle …
-            {!tier && !fusionOn && currentModel && <span className="tier-model">jetzt: {shortName(currentModel)}</span>}
-          </button>
+          {props.onAllModels && (
+            <button
+              role="menuitem"
+              className="tier-all"
+              onClick={() => {
+                setOpen(false);
+                props.onAllModels!();
+              }}
+            >
+              <Icon name="search" size={15} />
+              Alle Modelle …
+              {!tier && !fusionOn && currentModel && <span className="tier-model">jetzt: {shortName(currentModel)}</span>}
+            </button>
+          )}
         </div>
       )}
     </div>

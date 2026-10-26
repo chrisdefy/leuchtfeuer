@@ -139,6 +139,8 @@ export interface Settings {
   noBackupReminder?: boolean;
   /** Text size for the whole app. */
   textSize?: "normal" | "large" | "xlarge";
+  /** "simple" shows only what a beginner needs; everything else keeps working out of sight. */
+  view?: "simple" | "full";
   systemPrompt: string;
   /** undefined = provider default */
   temperature?: number;
@@ -197,7 +199,14 @@ function usePersisted<T>(key: string, initial: () => T, delay = 300) {
 }
 
 export function useSettings() {
-  return usePersisted<Settings>("router.settings.v1", () => read("router.settings.v1", DEFAULT_SETTINGS), 0);
+  return usePersisted<Settings>("router.settings.v1", readSettings, 0);
+}
+
+function readSettings(): Settings {
+  const stored = read<Partial<Settings>>("router.settings.v1", {});
+  // Newcomers start simple; settings saved before the switch existed belong to people who know the full view.
+  const view = stored.view ?? (Object.keys(stored).length ? "full" : "simple");
+  return { ...DEFAULT_SETTINGS, ...stored, view };
 }
 
 export function useChats() {
