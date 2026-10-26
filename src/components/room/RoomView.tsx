@@ -112,6 +112,8 @@ export function RoomView(props: Props) {
 
   const runningRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  /** The voice pick in progress, so callers that overlap share it instead of picking twice. */
+  const voicesRef = useRef<Promise<void> | null>(null);
   const skipWait = useRef<(() => void) | null>(null);
   /** Continue automatically once the human participant has spoken. */
   const resumeAfterHuman = useRef(false);
@@ -229,6 +231,8 @@ export function RoomView(props: Props) {
 
   /** One participant speaks. Returns false when it failed. */
   async function speak(p: Participant): Promise<boolean> {
+    // Pick voices while this turn is being written, so reading it aloud need not wait.
+    if (roomRef.current.readAloud) void ensureVoices();
     await ensureMemory();
     const model = byId.get(p.model);
     const r = roomRef.current;
@@ -491,7 +495,14 @@ export function RoomView(props: Props) {
   }
 
   /** A fitting voice for every AI participant that has none yet: chosen by a cheap model, by rule if that fails. */
-  async function ensureVoices() {
+  function ensureVoices(): Promise<void> {
+    voicesRef.current ??= pickVoices().finally(() => {
+      voicesRef.current = null;
+    });
+    return voicesRef.current;
+  }
+
+  async function pickVoices() {
     const r = roomRef.current;
     const missing = r.participants.filter((p) => !p.human && !p.voice);
     if (!missing.length) return;
@@ -527,8 +538,11 @@ export function RoomView(props: Props) {
 
   /** One turn read aloud in the participant's voice; resolves when it has been spoken (or stopped). */
   async function readTurn(p: Participant, messageId: string, text: string) {
+    // `p` is the participant as the turn began; the voice may have been picked since.
+    const voice = () => roomRef.current.participants.find((x) => x.id === p.id)?.voice;
     try {
-      await toggleSpeaking(`room-${messageId}`, text, { mode: "natural", apiKey, naturalVoice: p.voice, label: p.name });
+      if (!voice()) await ensureVoices();
+      await toggleSpeaking(`room-${messageId}`, text, { mode: "natural", apiKey, naturalVoice: voice() ?? p.voice, label: p.name });
     } catch (e) {
       update((x) => ({ ...x, readAloud: false }));
       setHalt({ reason: `Vorlesen ist fehlgeschlagen und wurde ausgeschaltet: ${(e as Error).message}` });
@@ -941,7 +955,7 @@ export function RoomView(props: Props) {
               <label className="visually-hidden" htmlFor="batch">
                 Anzahl Runden
               </label>
-              <select id="batch" className="select" value={batch} onChange={(e) => setBatch(Number(e.target.value))}>
+              <select id="batch" className="select" value={batch} title="Wie viele Runden am Stück" onChange={(e) => setBatch(Number(e.target.value))}>
                 {[1, 2, 3, 5, 10].map((n) => (
                   <option key={n} value={n}>
                     {n}

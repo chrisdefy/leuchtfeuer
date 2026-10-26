@@ -2029,10 +2029,14 @@ kbd {
   position: relative;
 }
 
-/* Before signing in there is nothing to pick or type yet: the welcome text carries the screen. */
-.main.signed-out .lanes,
-.main.signed-out .composer-wrap {
+/* Before signing in there is nothing to pick or type yet: the welcome text carries the screen.
+   The composer is taken out of the layout so the welcome text gets its height. */
+.main.signed-out .lanes {
   visibility: hidden;
+}
+
+.main.signed-out .composer-wrap {
+  display: none;
 }
 
 .drop-hint {
@@ -4116,20 +4120,54 @@ input[type="checkbox"] {
   gap: 8px;
 }
 
+/* One pill like its neighbours: count on the left, reads "2 Runden abspielen". */
 .rounds-run {
   display: inline-flex;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--raised);
+  overflow: hidden;
+}
+
+.rounds-run:hover {
+  border-color: var(--ink-3);
 }
 
 .rounds-run .select {
   width: auto;
-  height: 36px;
-  padding: 0 6px 0 10px;
-  border-right: 0;
-  border-radius: var(--r-md) 0 0 var(--r-md);
+  height: 100%;
+  padding: 0 32px 0 18px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  border-radius: 0;
+  background-color: transparent;
+  background-position:
+    calc(100% - 18px) 52%,
+    calc(100% - 13px) 52%;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+
+.rounds-run .select:focus {
+  outline-offset: -3px;
 }
 
 .rounds-run .button {
-  border-radius: 0 var(--r-md) var(--r-md) 0;
+  height: 100%;
+  padding: 0 18px 0 14px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.rounds-run .select:hover,
+.rounds-run .button:hover:not(:disabled) {
+  background-color: var(--in-soft);
+}
+
+.rounds-run .button:focus-visible {
+  outline-offset: -3px;
 }
 
 .pace {
