@@ -65,12 +65,21 @@ export interface NowSpeaking {
   id: string;
   label?: string;
   phase: SpeechPhase;
+  /** The phone would not start the voice on its own; it plays on the next tap ("Abspielen"). */
+  waiting?: boolean;
 }
 
 let current: NowSpeaking | null = null;
 /** Bumped on every start and stop, so callbacks of an old reading do nothing. */
 let session = 0;
 let audio: HTMLAudioElement | null = null;
+/**
+ * The one element every natural voice plays through. Phones only let audio start in the tap itself,
+ * but the voice arrives seconds later from OpenRouter; an element that played once inside a tap
+ * stays allowed, so the tap that starts reading plays a moment of silence on it first.
+ */
+let player: HTMLAudioElement | null = null;
+let silence = "";
 let abort: AbortController | null = null;
 /** Continues a paused browser reading from the sentence it stopped in. */
 let resumeBrowser: (() => void) | null = null;
@@ -90,9 +99,9 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l);
 }
 
-/** "playing" | "loading" | "paused" | null for one message. */
-export function useSpeechState(id: string) {
-  return useSyncExternalStore(subscribe, () => (current?.id === id ? current.phase : null));
+/** "playing" | "loading" | "paused" | "waiting" (ready, needs a tap) | null for one message. */
+export function useSpeechState(id: string): SpeechPhase | "waiting" | null {
+  return useSyncExternalStore(subscribe, () => (current?.id === id ? (current.waiting ? "waiting" : current.phase) : null));
 }
 
 /** The reading in progress anywhere in the app, for the player bar. */
@@ -100,10 +109,70 @@ export function useNowSpeaking() {
   return useSyncExternalStore(subscribe, () => current);
 }
 
-/** Markdown to speakable text: no symbols, code is announced instead of spelled out. */
+/** What a code block becomes when read: text cards are read, pictures and code are only named. */
+function spokenBlock(lang: string, body: string) {
+  switch (lang.toLowerCase()) {
+    case "text":
+    case "txt":
+      return `\n\n${body}\n\n`;
+    case "chart": {
+      let title = "";
+      try {
+        title = String(JSON.parse(body)?.title ?? "");
+      } catch {
+        /* half a chart */
+      }
+      return title ? `\n\n(Diagramm: ${title})\n\n` : "\n\n(Diagramm)\n\n";
+    }
+    case "svg":
+      return "\n\n(Grafik)\n\n";
+    case "mermaid":
+    case "flow":
+      return "\n\n(Ablaufdiagramm)\n\n";
+    default:
+      return "\n\n(Codebeispiel ausgelassen)\n\n";
+  }
+}
+
+/** A Markdown table, read row by row: "Löwe, Größe 2 m, Gewicht 190 kg." instead of pipes and dashes. */
+function tablesToSentences(markdown: string) {
+  const lines = markdown.split("\n");
+  const cells = (line: string) =>
+    line
+      .trim()
+      .replace(/^\||\|$/g, "")
+      .split("|")
+      .map((c) => c.trim());
+  const isRule = (line: string) => line.includes("|") && line.includes("-") && /^[\s|:-]+$/.test(line);
+  const out: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (!(lines[i].includes("|") && isRule(lines[i + 1] ?? ""))) {
+      out.push(lines[i]);
+      continue;
+    }
+    const head = cells(lines[i]);
+    const rows: string[] = [];
+    for (i += 2; i < lines.length && lines[i].includes("|") && lines[i].trim(); i++) {
+      const row = cells(lines[i]);
+      const rest = row.slice(1).map((c, j) => (c && head[j + 1] ? `${head[j + 1]} ${c}` : c)).filter(Boolean);
+      const sentence = [row[0], ...rest].filter(Boolean).join(", ");
+      if (sentence) rows.push(/[.!?:]$/.test(sentence) ? sentence : `${sentence}.`);
+    }
+    i--;
+    out.push("", rows.join("\n"), "");
+  }
+  return out.join("\n");
+}
+
+/** Markdown to speakable text: no symbols; tables become sentences, pictures and code are named instead of spelled out. */
 export function speakable(markdown: string) {
-  return markdown
-    .replace(/```[\s\S]*?```/g, " (Codebeispiel ausgelassen) ")
+  return tablesToSentences(
+    markdown
+      .replace(/```[ \t]*([\w-]*)[^\n]*\n([\s\S]*?)(?:```|$)/g, (_, lang: string, body: string) => spokenBlock(lang, body))
+      .replace(/<svg[\s\S]*?(<\/svg>|$)/gi, "\n\n(Grafik)\n\n"),
+  )
+    .replace(/<\/?[a-z][^>]*>/gi, " ")
+    .replace(/^\s{0,3}([-*_])(\s*\1){2,}\s*$/gm, "")
     .replace(/`([^`]+)`/g, "$1")
     .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
     .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
@@ -113,14 +182,14 @@ export function speakable(markdown: string) {
     .replace(/\|/g, ", ")
     .replace(/[*_~]{1,3}/g, "")
     // Paragraph breaks become a pause, without doubling a full stop that is already there.
-    .replace(/([.!?:;])?\s*\n{2,}\s*/g, (_, p: string | undefined) => (p ? `${p} ` : ". "))
+    .replace(/([.!?:;,])?\s*\n{2,}\s*/g, (_, p: string | undefined) => (p ? `${p} ` : ". "))
     .replace(/\s+/g, " ")
     .trim();
 }
 
 /** Sentence-sized pieces: long single utterances get cut off in some browsers. */
 function chunks(text: string, max: number) {
-  const sentences = text.match(/[^.!?]+[.!?]+["“”)]*\s*|[^.!?]+$/g) ?? [text];
+  const sentences = (text.match(/[^.!?]+[.!?]+["“”)]*\s*|[^.!?]+$/g) ?? [text]).flatMap((s) => splitLong(s, max));
   const out: string[] = [];
   let cur = "";
   for (const s of sentences) {
@@ -134,6 +203,24 @@ function chunks(text: string, max: number) {
   return out;
 }
 
+/** A sentence longer than a piece (long lists without full stops) is cut after a comma, else between words. */
+function splitLong(sentence: string, max: number): string[] {
+  if (sentence.length <= max) return [sentence];
+  const cut = sentence.lastIndexOf(", ", max) > max / 3 ? sentence.lastIndexOf(", ", max) + 2 : sentence.lastIndexOf(" ", max) + 1 || max;
+  return [sentence.slice(0, cut), ...splitLong(sentence.slice(cut), max)];
+}
+
+/** Called in the tap that starts reading, before anything is awaited. */
+function unlockPlayer() {
+  if (typeof Audio === "undefined") return null;
+  player ??= new Audio();
+  silence ||= URL.createObjectURL(wavFromPcm16(new Uint8Array(PCM_RATE / 10), PCM_RATE));
+  player.src = silence;
+  // Outside a tap (rooms reading on their own) this is refused, which is fine: an earlier tap unlocked it.
+  player.play().catch(() => {});
+  return player;
+}
+
 export function stopSpeaking() {
   session++;
   abort?.abort();
@@ -142,7 +229,7 @@ export function stopSpeaking() {
   if (typeof speechSynthesis !== "undefined") speechSynthesis.cancel();
   if (audio) {
     audio.pause();
-    URL.revokeObjectURL(audio.src);
+    if (audio.src !== silence) URL.revokeObjectURL(audio.src);
     audio = null;
   }
   set(null);
@@ -158,8 +245,8 @@ export function pauseSpeaking() {
 
 export function resumeSpeaking() {
   if (current?.phase !== "paused") return;
-  setPhase("playing");
-  if (audio) void audio.play();
+  set({ ...current, phase: "playing", waiting: false });
+  if (audio) void audio.play().catch(() => setPhase("paused"));
   // Chrome sometimes drops a speak() right after cancel(); a short pause avoids that.
   else setTimeout(() => resumeBrowser?.(), 60);
 }
@@ -239,6 +326,8 @@ export async function synthesize(markdown: string, apiKey: string, voice: string
 }
 
 async function speakNatural(id: string, text: string, apiKey: string, voiceName = NATURAL_VOICE, label?: string) {
+  const el = unlockPlayer();
+  if (!el) throw new Error("Dieser Browser kann nicht vorlesen.");
   abort = new AbortController();
   const mine = ++session;
   set({ id, label, phase: "loading" });
@@ -246,19 +335,28 @@ async function speakNatural(id: string, text: string, apiKey: string, voiceName 
   for (const part of chunks(text, 1500)) {
     const pcm = await fetchPcm(part, apiKey, voiceName, signal);
     if (signal.aborted || mine !== session) return;
-    const el = new Audio(URL.createObjectURL(wavFromPcm16(pcm, PCM_RATE)));
+    const url = URL.createObjectURL(wavFromPcm16(pcm, PCM_RATE));
+    el.src = url;
     audio = el;
     // Paused while this piece loaded: it waits until "Weiter".
     if (current?.phase !== "paused") {
       setPhase("playing");
-      await el.play();
+      try {
+        await el.play();
+      } catch (e) {
+        if ((e as Error).name !== "NotAllowedError") throw e;
+        // The phone still refuses to start on its own: the voice is ready and plays on the next tap.
+        if (current) set({ ...current, phase: "paused", waiting: true });
+      }
     }
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       el.onended = () => resolve();
+      el.onerror = () => reject(new Error("Die Stimme ließ sich auf diesem Gerät nicht abspielen."));
       signal.addEventListener("abort", () => resolve(), { once: true });
     });
+    el.onended = el.onerror = null;
     if (signal.aborted || mine !== session) return;
-    URL.revokeObjectURL(el.src);
+    URL.revokeObjectURL(url);
     audio = null;
   }
   if (mine === session) set(null);
@@ -271,6 +369,8 @@ export async function toggleSpeaking(
   opts: { mode: VoiceMode; apiKey: string; naturalVoice?: string; browserVoice?: string; label?: string },
 ) {
   const wasThis = current?.id === id;
+  // The voice is ready but was waiting for a tap: this is the tap.
+  if (wasThis && current?.waiting) return resumeSpeaking();
   stopSpeaking();
   if (wasThis) return;
   const text = speakable(markdown);
@@ -279,7 +379,10 @@ export async function toggleSpeaking(
     if (opts.mode === "natural" && opts.apiKey) await speakNatural(id, text, opts.apiKey, opts.naturalVoice, opts.label);
     else speakBrowser(id, text, opts.browserVoice, opts.label);
   } catch (e) {
-    stopSpeaking();
-    if ((e as Error).name !== "AbortError") throw e;
+    // Only end this reading; another one may have started in the meantime.
+    if (current?.id === id) stopSpeaking();
+    if ((e as Error).name === "AbortError") return;
+    if ((e as Error).name === "NotAllowedError") throw new Error("Das Gerät hat das Vorlesen blockiert. Tippe noch einmal auf „Vorlesen“.");
+    throw e;
   }
 }

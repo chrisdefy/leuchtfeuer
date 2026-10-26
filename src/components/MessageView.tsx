@@ -173,10 +173,10 @@ export function MessageView(props: Props) {
                 )
               }
               aria-pressed={!!speech}
-              title={speech ? "Vorlesen beenden" : "Antwort laut vorlesen lassen"}
+              title={speech === "waiting" ? "Die Stimme ist bereit: tippen zum Abspielen" : speech ? "Vorlesen beenden" : "Antwort laut vorlesen lassen"}
             >
-              <Icon name={speech && speech !== "loading" ? "stop" : "speaker"} size={14} />
-              {speech === "loading" ? "Lädt …" : speech ? "Stopp" : "Vorlesen"}
+              <Icon name={speech === "waiting" ? "play" : speech && speech !== "loading" ? "stop" : "speaker"} size={14} />
+              {speech === "loading" ? "Lädt …" : speech === "waiting" ? "Abspielen" : speech ? "Stopp" : "Vorlesen"}
             </button>
           )}
           {props.simple && canRegenerate && !m.video && (

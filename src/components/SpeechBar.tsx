@@ -14,17 +14,17 @@ export function SpeechBar() {
         <span />
       </span>
       <span className="speech-label" role="status">
-        {now.phase === "loading" ? "Stimme wird geladen …" : paused ? "Pausiert" : "Liest vor"}
+        {now.phase === "loading" ? "Stimme wird geladen …" : now.waiting ? "Bereit zum Abspielen" : paused ? "Pausiert" : "Liest vor"}
         <span className="speech-source">: {now.label}</span>
       </span>
       <button
         className="button small"
         onClick={paused ? resumeSpeaking : pauseSpeaking}
         disabled={now.phase === "loading"}
-        title={paused ? "Vorlesen fortsetzen" : "Vorlesen anhalten"}
+        title={now.waiting ? "Die Stimme ist bereit: tippen zum Abspielen" : paused ? "Vorlesen fortsetzen" : "Vorlesen anhalten"}
       >
         <Icon name={paused ? "play" : "pause"} size={13} />
-        {paused ? "Weiter" : "Pause"}
+        {now.waiting ? "Abspielen" : paused ? "Weiter" : "Pause"}
       </button>
       <button className="button small" onClick={stopSpeaking} title="Vorlesen beenden">
         <Icon name="stop" size={12} />

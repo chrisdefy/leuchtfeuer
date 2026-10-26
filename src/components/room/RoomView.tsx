@@ -53,7 +53,7 @@ import { AudioPlayDialog } from "./AudioPlayDialog";
 import { usePopover } from "../usePopover";
 import { musicLevels } from "../../lib/media";
 import { SpeechBar } from "../SpeechBar";
-import { NATURAL_VOICES, stopSpeaking, toggleSpeaking, useSpeechState } from "../../lib/speech";
+import { NATURAL_VOICES, resumeSpeaking, stopSpeaking, toggleSpeaking, useSpeechState } from "../../lib/speech";
 
 interface Props {
   room: Room;
@@ -1310,11 +1310,13 @@ function RoomReadButton(props: { id: string; name: string; onRead: () => Promise
     <div className="room-msg-actions">
       <button
         className={`ghost small${state ? " speaking" : ""}`}
-        onClick={() => (state ? stopSpeaking() : void props.onRead().catch((e) => props.onError((e as Error).message)))}
-        title={state ? "Vorlesen beenden" : `Mit der Stimme von ${props.name} vorlesen`}
+        onClick={() =>
+          state === "waiting" ? resumeSpeaking() : state ? stopSpeaking() : void props.onRead().catch((e) => props.onError((e as Error).message))
+        }
+        title={state === "waiting" ? "Die Stimme ist bereit: tippen zum Abspielen" : state ? "Vorlesen beenden" : `Mit der Stimme von ${props.name} vorlesen`}
       >
-        <Icon name={state && state !== "loading" ? "stop" : "speaker"} size={14} />
-        {state === "loading" ? "Lädt …" : state ? "Stopp" : "Vorlesen"}
+        <Icon name={state === "waiting" ? "play" : state && state !== "loading" ? "stop" : "speaker"} size={14} />
+        {state === "loading" ? "Lädt …" : state === "waiting" ? "Abspielen" : state ? "Stopp" : "Vorlesen"}
       </button>
     </div>
   );

@@ -339,7 +339,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
               disabled={voiceMode === "natural" && !apiKey.trim()}
               title="Einen kurzen Beispielsatz mit dieser Stimme hören"
             >
-              {preview === "playing" ? "Stopp" : preview === "loading" ? "Lädt …" : "Probe anhören"}
+              {preview === "playing" ? "Stopp" : preview === "loading" ? "Lädt …" : preview === "waiting" ? "Abspielen" : "Probe anhören"}
             </button>
           </div>
           {voiceMode === "browser" && systemVoices.length === 0 && (

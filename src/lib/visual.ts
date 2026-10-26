@@ -73,5 +73,7 @@ export function parseChart(code: string): ChartSpec | null {
 /** An SVG sketch is shown only if it really is one; as an <img> nothing inside it can run. */
 export function svgSource(code: string): string | null {
   const svg = code.trim();
-  return /^(<\?xml[^>]*>\s*)?<svg[\s>]/i.test(svg) && /<\/svg>\s*$/i.test(svg) ? svg : null;
+  if (!(/^(<\?xml[^>]*>\s*)?<svg[\s>]/i.test(svg) && /<\/svg>\s*$/i.test(svg))) return null;
+  // As an image, an SVG without its namespace stays blank; models often leave it out.
+  return /<svg[^>]*\sxmlns\s*=/i.test(svg) ? svg : svg.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
 }
