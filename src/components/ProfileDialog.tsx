@@ -80,6 +80,7 @@ export function ProfileDialog(props: Props) {
                 aria-selected={p.id === selected}
                 className="chip"
                 onClick={() => setSelected(p.id)}
+                title="Dieses Profil bearbeiten"
               >
                 {p.name.trim() || "Ohne Namen"}
                 {p.id === defaultProfile && <span className="chip-flag">Start</span>}
@@ -122,6 +123,7 @@ export function ProfileDialog(props: Props) {
                 <select
                   id="profile-level"
                   className="select"
+                  title="Mit welcher Stufe ein Chat in diesem Profil antwortet"
                   value={current.level ?? ""}
                   onChange={(e) => update({ level: (e.target.value || undefined) as Profile["level"] })}
                 >
@@ -138,6 +140,7 @@ export function ProfileDialog(props: Props) {
                 <select
                   id="profile-reasoning"
                   className="select"
+                  title="Wie gründlich das Modell in diesem Profil nachdenkt"
                   value={current.reasoning ?? ""}
                   onChange={(e) => update({ reasoning: (e.target.value || undefined) as Profile["reasoning"] })}
                 >
@@ -168,7 +171,7 @@ export function ProfileDialog(props: Props) {
             </fieldset>
             <div className="profile-row">
               <span className="hint">{profileSummary(current)}</span>
-              <button className="button small danger" onClick={remove}>
+              <button className="button small danger" onClick={remove} title="Dieses Profil löschen; Chats, die damit begonnen haben, bleiben unverändert">
                 <Icon name="trash" size={15} />
                 Profil löschen
               </button>
@@ -176,7 +179,7 @@ export function ProfileDialog(props: Props) {
           </div>
         ) : (
           <div className="profile-empty">
-            <button className="button" onClick={() => add()}>
+            <button className="button" onClick={() => add()} title="Ein neues Profil ohne Vorgaben anlegen">
               <Icon name="plus" size={15} />
               Leeres Profil anlegen
             </button>
@@ -188,7 +191,7 @@ export function ProfileDialog(props: Props) {
             <span className="field-label">Vorlagen</span>
             <div className="profile-templates">
               {unusedTemplates.map((t) => (
-                <button key={t.name} className="profile-template" onClick={() => add(t)}>
+                <button key={t.name} className="profile-template" onClick={() => add(t)} title="Diese Vorlage als neues Profil übernehmen und anpassen">
                   <span className="profile-template-name">
                     <Icon name="plus" size={14} />
                     {t.name}
@@ -201,10 +204,10 @@ export function ProfileDialog(props: Props) {
         )}
 
         <footer className="dialog-foot">
-          <button className="button" onClick={props.onClose}>
+          <button className="button" onClick={props.onClose} title="Schließen, ohne die Änderungen zu übernehmen">
             Abbrechen
           </button>
-          <button className="button primary" onClick={save}>
+          <button className="button primary" onClick={save} title="Die Profile speichern">
             Speichern
           </button>
         </footer>

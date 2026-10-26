@@ -48,7 +48,7 @@ export function Flowchart({ flow }: { flow: Flow }) {
         </svg>
       </div>
       <div className="viz-foot">
-        <button className="ghost small" onClick={() => svg.current && downloadSvg(svg.current, "Ablauf")}>
+        <button className="ghost small" onClick={() => svg.current && downloadSvg(svg.current, "Ablauf")} title="Den Ablauf als Bilddatei speichern, die sich ohne Qualitätsverlust vergrößern lässt">
           Als SVG herunterladen
         </button>
       </div>

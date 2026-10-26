@@ -66,6 +66,7 @@ export function ParticipantFields({ participant: p, models, onChange, onPickMode
       <Field label="Rolle" compact={compact}>
         <select
           className="select"
+          title="Welche Rolle diese Figur im Gespräch spielt"
           value={p.roleId}
           onChange={(e) => {
             const own = saved.find((r) => r.id === e.target.value);
@@ -106,6 +107,7 @@ export function ParticipantFields({ participant: p, models, onChange, onPickMode
       <Field label="Modell" compact={compact}>
         <select
           className={`select${noModel ? " missing" : ""}`}
+          title="Welche KI diese Figur spricht"
           // Without a usable model the select would silently show its first entry, as if one were set.
           value={noModel ? "" : p.model}
           aria-invalid={noModel || undefined}
@@ -136,7 +138,7 @@ export function ParticipantFields({ participant: p, models, onChange, onPickMode
         </select>
       </Field>
       <Field label="Länge" compact={compact}>
-        <select className="select" value={p.length} onChange={(e) => onChange({ length: e.target.value as Length })}>
+        <select className="select" title="Wie lang die Beiträge dieser Figur sind" value={p.length} onChange={(e) => onChange({ length: e.target.value as Length })}>
           {Object.entries(LENGTHS).map(([id, l]) => (
             <option key={id} value={id}>
               {l.label}
@@ -174,6 +176,7 @@ export function ParticipantFields({ participant: p, models, onChange, onPickMode
             <button
               type="button"
               className="ghost small save-role"
+              title="Die Rolle unter „Rolle“ aufnehmen, damit du sie in anderen Räumen wieder auswählen kannst"
               disabled={!p.roleName.trim() || !p.rolePrompt.trim() || p.roleName === "Eigene Rolle"}
               onClick={() => {
                 const role = saveRole({ name: p.roleName.trim(), prompt: p.rolePrompt.trim(), length: p.length });
@@ -244,17 +247,25 @@ function RoleBuilder(props: { apiKey?: string; models: Model[] | null; fallbackM
             onChange={(e) => setIdea(e.target.value)}
           />
           {props.apiKey && (
-            <button type="button" className="button small" onClick={fill} disabled={busy || !idea.trim()} aria-busy={busy}>
+            <button
+              type="button"
+              className="button small"
+              onClick={fill}
+              disabled={busy || !idea.trim()}
+              aria-busy={busy}
+              title="Aus deiner kurzen Beschreibung Name und Anweisung der Rolle schreiben lassen"
+            >
               {busy ? "Füllt aus …" : "Mit KI ausfüllen"}
             </button>
           )}
         </span>
       </label>
       <details className="role-copy">
-        <summary>Lieber mit einer anderen KI? Vorlage kopieren und Ergebnis einfügen</summary>
+        <summary title="Aufklappen: die Rolle mit einer anderen KI, etwa ChatGPT, schreiben lassen">Lieber mit einer anderen KI? Vorlage kopieren und Ergebnis einfügen</summary>
         <button
           type="button"
           className="ghost small"
+          title="Eine fertige Anfrage in die Zwischenablage kopieren, die du in eine andere KI einfügst"
           onClick={async () => {
             await navigator.clipboard.writeText(templateFor(idea));
             setCopied(true);

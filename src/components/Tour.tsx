@@ -105,11 +105,16 @@ export function Tour({ steps, onEnd, onStep }: { steps: TourStep[]; onEnd: () =>
         </div>
         <div className="tour-foot">
           {i > 0 && (
-            <button className="button small" onClick={() => setI(i - 1)}>
+            <button className="button small" onClick={() => setI(i - 1)} title="Zum vorigen Schritt (Pfeil links)">
               Zurück
             </button>
           )}
-          <button className="button primary small" autoFocus onClick={() => (last ? onEnd() : setI(i + 1))}>
+          <button
+            className="button primary small"
+            autoFocus
+            onClick={() => (last ? onEnd() : setI(i + 1))}
+            title={last ? "Die Einführung beenden" : "Zum nächsten Schritt (Pfeil rechts)"}
+          >
             {last ? "Los geht's" : "Weiter"}
           </button>
         </div>

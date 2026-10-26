@@ -137,12 +137,12 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
           <div className="tour-row">
             <p className="hint">Kurze Touren zeigen dir an einem Beispiel, wo alles ist. Sie kosten nichts.</p>
             <div className="tour-buttons">
-              <button className="button small" onClick={onTour}>
+              <button className="button small" onClick={onTour} title="Die Tour durch einen Beispiel-Chat starten">
                 <Icon name="help" size={15} />
                 Chats
               </button>
               {!simple && (
-                <button className="button small" onClick={onRoomTour}>
+                <button className="button small" onClick={onRoomTour} title="Die Tour durch einen Beispiel-Chatroom starten">
                   <Icon name="help" size={15} />
                   Chatrooms
                 </button>
@@ -187,7 +187,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
             OpenRouter selbst nach, sobald das Guthaben unter einen Betrag fällt.
           </p>
           <details className="manual-key" open={false}>
-            <summary>API-Key selbst eingeben</summary>
+            <summary title="Einen Key von openrouter.ai von Hand einfügen, statt dich anzumelden">API-Key selbst eingeben</summary>
             <ApiKeyField id="api-key" value={apiKey} onChange={setApiKey} />
             <p className="hint">
               Wird nur in diesem Browser gespeichert und direkt an OpenRouter gesendet.{" "}
@@ -221,7 +221,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
                 : "Gespeicherte Arbeitsweisen: Anweisung, Stufe und Schalter, im Eingabefeld mit einem Klick gewählt."}
             </p>
             <div className="tour-buttons">
-              <button className="button small" onClick={onProfiles}>
+              <button className="button small" onClick={onProfiles} title="Profile anlegen, ändern oder löschen">
                 <Icon name="profile" size={15} />
                 {settings.profiles?.length ? "Bearbeiten" : "Anlegen"}
               </button>
@@ -306,7 +306,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
           </label>
           <div className="voice-pick">
             {voiceMode === "natural" ? (
-              <select className="select" value={naturalVoice} onChange={(e) => setNaturalVoice(e.target.value)} aria-label="KI-Stimme">
+              <select className="select" value={naturalVoice} onChange={(e) => setNaturalVoice(e.target.value)} aria-label="KI-Stimme" title="Welche KI-Stimme Antworten vorliest">
                 <optgroup label="Weibliche Stimmen">
                   {NATURAL_VOICES.filter((v) => v.gender === "w").map((v) => (
                     <option key={v.id} value={v.id}>
@@ -323,7 +323,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
                 </optgroup>
               </select>
             ) : (
-              <select className="select" value={browserVoice} onChange={(e) => setBrowserVoice(e.target.value)} aria-label="Browser-Stimme">
+              <select className="select" value={browserVoice} onChange={(e) => setBrowserVoice(e.target.value)} aria-label="Browser-Stimme" title="Welche Stimme des Geräts Antworten vorliest">
                 <option value="">Automatisch die beste deutsche Stimme</option>
                 {systemVoices.map((v) => (
                   <option key={v.voiceURI} value={v.voiceURI}>
@@ -381,7 +381,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
           <div className="field-row">
             <span className="hint">Niedrig ist präziser, hoch ist kreativer.</span>
             {temperature !== undefined && (
-              <button className="link-button" onClick={() => setTemperature(undefined)}>
+              <button className="link-button" onClick={() => setTemperature(undefined)} title="Wieder den Standardwert des jeweiligen Modells nehmen">
                 Zurücksetzen
               </button>
             )}
@@ -402,6 +402,7 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
               className="button small"
               disabled={backingUp}
               aria-busy={backingUp}
+              title="Alle Chats, Chatrooms, Ordner, Rollen und Bilder als eine Datei herunterladen (ohne API-Key)"
               onClick={() => {
                 setBackingUp(true);
                 onBackup().finally(() => setBackingUp(false));
@@ -443,10 +444,10 @@ export function SettingsDialog({ settings, onSave, onBackup, onRestore, onClose,
         )}
 
         <footer className="dialog-foot">
-          <button className="button" onClick={onClose}>
+          <button className="button" onClick={onClose} title="Schließen, ohne die Änderungen zu übernehmen">
             Abbrechen
           </button>
-          <button className="button primary" onClick={save}>
+          <button className="button primary" onClick={save} title="Die Änderungen übernehmen und schließen">
             Speichern
           </button>
         </footer>
@@ -510,6 +511,7 @@ function TierSettings(props: {
             </span>
             <select
               className="select"
+              title={`Welches Modell hinter der Stufe „${t.label}“ steckt`}
               value={props.value[t.id] ?? ""}
               onChange={(e) => props.onChange({ ...props.value, [t.id]: e.target.value || undefined })}
             >

@@ -109,7 +109,7 @@ export function ReviewDialog({ room, judge, models, apiKey, onSave, onContinue, 
         <p className="review-judge">
           Unabhängiger Bewerter: <strong>{review && writing === null ? (models?.find((m) => m.id === review.model) ? shortName(models.find((m) => m.id === review.model)!) : review.model) : judgeName}</strong>
           , ein anderes Modell als die Teilnehmer.{" "}
-          <button className="link-button" onClick={onPickJudge} disabled={busy}>
+          <button className="link-button" onClick={onPickJudge} disabled={busy} title="Ein anderes Modell als Bewerter aussuchen">
             Anderen Bewerter wählen
           </button>
         </p>
@@ -124,7 +124,7 @@ export function ReviewDialog({ room, judge, models, apiKey, onSave, onContinue, 
                 <Icon name={review.verdict === "continue" ? "play" : "check"} size={15} />
                 {review.verdict === "continue" ? "Der Bewerter empfiehlt, weiterzumachen." : "Der Bewerter hält das Gespräch für abgeschlossen."}
                 {review.verdict === "continue" && (
-                  <button className="button small" onClick={onContinue}>
+                  <button className="button small" onClick={onContinue} title="Das Gespräch zwei weitere Runden laufen lassen">
                     2 Runden weiter
                   </button>
                 )}
@@ -181,18 +181,18 @@ export function ReviewDialog({ room, judge, models, apiKey, onSave, onContinue, 
           </p>
           <div className="dialog-buttons">
             {review && (
-              <button className="button" onClick={() => navigator.clipboard.writeText(review.text)} disabled={busy}>
+              <button className="button" onClick={() => navigator.clipboard.writeText(review.text)} disabled={busy} title="Die Bewertung in die Zwischenablage kopieren">
                 <Icon name="copy" size={15} />
                 Kopieren
               </button>
             )}
             {contributions > 0 && (
-              <button className="button" onClick={() => void write()} disabled={busy}>
+              <button className="button" onClick={() => void write()} disabled={busy} title={review ? "Das Gespräch noch einmal bewerten lassen, mit dem aktuellen Stand" : "Ein unabhängiges Modell bewertet das Gespräch und zieht ein Fazit"}>
                 <Icon name="refresh" size={15} />
                 {review ? "Neu bewerten" : "Bewerten"}
               </button>
             )}
-            <button className="button primary" onClick={onClose} disabled={busy}>
+            <button className="button primary" onClick={onClose} disabled={busy} title="Fenster schließen; die Bewertung bleibt gespeichert">
               Schließen
             </button>
           </div>

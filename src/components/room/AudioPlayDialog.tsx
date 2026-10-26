@@ -237,27 +237,27 @@ export function AudioPlayDialog({ room, judge, apiKey, ensureVoices, onReview, o
         <footer className="dialog-foot">
           {stage.kind === "intro" && (
             <>
-              <button className="button" onClick={onClose}>
+              <button className="button" onClick={onClose} title="Schließen, ohne ein Hörspiel zu erstellen">
                 Abbrechen
               </button>
-              <button className="button primary" onClick={() => void start()}>
+              <button className="button primary" onClick={() => void start()} title="Das Gespräch mit eigenen Stimmen und Musik als MP3-Datei vertonen">
                 <Icon name="speaker" size={15} />
                 Hörspiel erstellen
               </button>
             </>
           )}
           {busy && (
-            <button className="button" onClick={() => abort.current?.abort()}>
+            <button className="button" onClick={() => abort.current?.abort()} title="Das Erstellen abbrechen">
               Abbrechen
             </button>
           )}
           {stage.kind === "done" && (
             <>
-              <button className="button" onClick={() => download(stage.url)}>
+              <button className="button" onClick={() => download(stage.url)} title="Die MP3-Datei noch einmal herunterladen">
                 <Icon name="download" size={15} />
                 Nochmal herunterladen
               </button>
-              <button className="button primary" onClick={onClose}>
+              <button className="button primary" onClick={onClose} title="Fenster schließen">
                 Fertig
               </button>
             </>

@@ -1838,7 +1838,7 @@ export default function App() {
           <p key={c.id} className="branch-note">
             <Icon name="fork" size={14} />
             Hier abgezweigt:{" "}
-            <button className="link-button" onClick={() => openChat(c.id)}>
+            <button className="link-button" onClick={() => openChat(c.id)} title="Den abgezweigten Chat öffnen">
               {c.title}
             </button>
           </p>
@@ -1972,6 +1972,7 @@ export default function App() {
               <button
                 className="button primary"
                 onClick={() => (settings.apiKey ? setRoomSetupOpen(true) : setSettingsOpen(true))}
+                title="Einen Raum einrichten: Situation beschreiben, die Rollen entstehen von selbst"
               >
                 <Icon name="plus" size={16} />
                 Chatroom erstellen
@@ -2137,7 +2138,7 @@ export default function App() {
                 }}
               />
               <details className="welcome-manual">
-                <summary>Ich habe schon einen API-Key</summary>
+                <summary title="Einen vorhandenen Key von openrouter.ai einfügen, statt dich anzumelden">Ich habe schon einen API-Key</summary>
               <form
                 className="welcome-key"
                 onSubmit={(e) => {
@@ -2149,7 +2150,7 @@ export default function App() {
                   OpenRouter-API-Key
                 </label>
                 <ApiKeyField id="onboard-key" value={onboardingKey} onChange={setOnboardingKey} />
-                <button className="button primary" type="submit" disabled={!onboardingKey.trim()}>
+                <button className="button primary" type="submit" disabled={!onboardingKey.trim()} title="Den Key in diesem Browser speichern und loslegen">
                   Key speichern
                 </button>
               </form>
@@ -2176,15 +2177,16 @@ export default function App() {
                 }
                 onChange={() => setPicker({ kind: "replace", lane: 0 })}
                 onCompare={() => setPicker({ kind: "add" })}
+                simple={simple}
               >
-              {!imagePrompt && models && (
+              {!imagePrompt && models && !simple && (
                 <div className="wb-invite">
                   <p>
                     <strong>Größere Aufgabe vor?</strong>
                     Beschreib sie grob. Die Werkbank stellt Rückfragen, formuliert die Aufgabe aus und schlägt Rolle,
                     Vorgehen und Modell vor.
                   </p>
-                  <button className="button" onClick={openWorkbench}>
+                  <button className="button" onClick={openWorkbench} title="Die Werkbank öffnen: Sie stellt Rückfragen und macht aus deiner Idee eine klare Aufgabe">
                     <Icon name="sparkle" size={15} />
                     Aufgabe vorbereiten
                   </button>
@@ -2199,7 +2201,7 @@ export default function App() {
                   <Icon name="fork" size={14} />
                   Abgezweigt von{" "}
                   {chats.some((c) => c.id === activeChat.forkOf!.chatId) ? (
-                    <button className="link-button" onClick={() => openChat(activeChat.forkOf!.chatId)}>
+                    <button className="link-button" onClick={() => openChat(activeChat.forkOf!.chatId)} title="Den Chat öffnen, aus dem dieser abgezweigt wurde">
                       „{activeChat.forkOf.title}“
                     </button>
                   ) : (
@@ -2231,7 +2233,11 @@ export default function App() {
                   ? `Der Verlauf füllt ${Math.round((context.tokens / context.window!) * 100)} % des Kontextfensters. Bald nimmt das Modell keine weiteren Nachrichten an.`
                   : `Dieser Chat ist lang (${formatTokens(context.tokens)} Tokens). Modelle verlieren dabei leichter den Überblick, und jede Nachricht kostet mehr.`}
               </p>
-              <button className="button small" onClick={() => setSummaryOpen(true)}>
+              <button
+                className="button small"
+                onClick={() => setSummaryOpen(true)}
+                title="Den bisherigen Stand zusammenfassen und damit in einem neuen Chat weitermachen. Dieser Chat bleibt erhalten."
+              >
                 Zusammenfassen und neu starten
               </button>
             </div>
@@ -2244,10 +2250,10 @@ export default function App() {
                   : "Die Kosten dieses Modells richten sich nach dem Ergebnis und lassen sich vorab nicht genau schätzen."}{" "}
                 Trotzdem erstellen?
               </span>
-              <button className="button small primary" onClick={() => send()}>
+              <button className="button small primary" onClick={() => send()} title="Das Video jetzt in Auftrag geben">
                 Video erstellen
               </button>
-              <button className="link-button" onClick={() => setVideoConfirm(false)}>
+              <button className="link-button" onClick={() => setVideoConfirm(false)} title="Nichts erstellen, die Beschreibung bleibt im Eingabefeld">
                 Abbrechen
               </button>
             </p>
@@ -2257,6 +2263,7 @@ export default function App() {
               <span>{draftOriginal.note}</span>
               <button
                 className="link-button"
+                title="Deinen ursprünglichen Text zurück ins Eingabefeld holen"
                 onClick={() => {
                   setDraft(draftOriginal.text);
                   setDraftOriginal(null);
@@ -2281,6 +2288,7 @@ export default function App() {
               <button
                 className="button small"
                 onClick={() => setPicker({ kind: "replace", lane: lanes.indexOf(blindLanes[0]), filter: "vision" })}
+                title="Die Modellauswahl öffnen, gefiltert auf Modelle, die Bilder sehen können"
               >
                 Modell wählen
               </button>
@@ -2296,6 +2304,7 @@ export default function App() {
               <button
                 className="button small"
                 onClick={() => setPicker({ kind: "replace", lane: lanes.indexOf(linkBlindLanes[0]), filter: "tools" })}
+                title="Die Modellauswahl öffnen, gefiltert auf Modelle, die Links öffnen können"
               >
                 Modell wählen
               </button>
@@ -2602,7 +2611,7 @@ export default function App() {
       {roomUndo && (
         <div className="toast" role="status">
           <span>„{roomUndo.room.title}“ gelöscht.</span>
-          <button className="link-button" onClick={restoreRoom}>
+          <button className="link-button" onClick={restoreRoom} title="Den gelöschten Raum zurückholen">
             Rückgängig
           </button>
         </div>
@@ -2623,7 +2632,7 @@ export default function App() {
       {undo && (
         <div className="toast" role="status">
           <span>„{undo.chat.title}“ gelöscht.</span>
-          <button className="link-button" onClick={restoreChat}>
+          <button className="link-button" onClick={restoreChat} title="Den gelöschten Chat zurückholen">
             Rückgängig
           </button>
         </div>
@@ -2651,7 +2660,7 @@ function ContextMeter({ usage, onClick }: { usage: ContextUsage; onClick: () => 
 function PrepCard({ prep, open }: { prep: NonNullable<Chat["prep"]>; open: boolean }) {
   return (
     <details className="seed prep-card" open={open}>
-      <summary>Vorbereitet mit der Werkbank{prep.role ? `: ${prep.role}` : ""}</summary>
+      <summary title="Aufklappen: die Anweisung, mit der die Werkbank diesen Chat vorbereitet hat">Vorbereitet mit der Werkbank{prep.role ? `: ${prep.role}` : ""}</summary>
       {prep.approach && <p className="prep-role">Vorgehen: {prep.approach}</p>}
       <pre>{prep.system}</pre>
     </details>
@@ -2666,12 +2675,12 @@ function SeedCard(props: {
 }) {
   return (
     <details className="seed" open={props.open}>
-      <summary>
+      <summary title="Aufklappen: die Zusammenfassung, mit der dieser Chat weitermacht">
         Fortsetzung von „{props.seed.fromTitle}“. Das Modell kennt die Zusammenfassung des bisherigen Stands.
       </summary>
       <Markdown text={props.seed.summary} />
       {props.exists && (
-        <button className="link-button" onClick={props.onOpen}>
+        <button className="link-button" onClick={props.onOpen} title="Den Chat öffnen, der hier zusammengefasst wurde">
           Ursprünglichen Chat öffnen
         </button>
       )}
@@ -2703,6 +2712,8 @@ function ModelHero(props: {
   note?: string;
   onChange: () => void;
   onCompare: () => void;
+  /** Simple view: name only, without prices or ways to pick and compare. */
+  simple?: boolean;
   children?: React.ReactNode;
 }) {
   const { model, id } = props;
@@ -2713,7 +2724,7 @@ function ModelHero(props: {
       <p className="hero-provider">{model ? providerLabel(model) : "Modell"}</p>
       <h1 className="hero-name">{model ? shortName(model) : id}</h1>
       {props.note && <p className="hero-note">{props.note}</p>}
-      {model && (
+      {model && !props.simple && (
         <dl className="hero-stats">
           <div>
             <dt>Eingabe</dt>
@@ -2729,15 +2740,17 @@ function ModelHero(props: {
           </div>
         </dl>
       )}
-      {model && <p className="hero-unit">Preise in US-Dollar pro einer Million Tokens.</p>}
-      <div className="hero-actions">
-        <button className="link-button" onClick={props.onChange}>
-          Anderes Modell wählen
-        </button>
-        <button className="link-button" onClick={props.onCompare}>
-          Mit weiteren Modellen vergleichen
-        </button>
-      </div>
+      {model && !props.simple && <p className="hero-unit">Preise in US-Dollar pro einer Million Tokens.</p>}
+      {!props.simple && (
+        <div className="hero-actions">
+          <button className="link-button" onClick={props.onChange} title="Die Auswahl aller Modelle mit Preisen öffnen">
+            Anderes Modell wählen
+          </button>
+          <button className="link-button" onClick={props.onCompare} title="Dieselbe Frage mehreren Modellen stellen und die Antworten nebeneinander sehen">
+            Mit weiteren Modellen vergleichen
+          </button>
+        </div>
+      )}
       {props.children}
     </section>
   );
@@ -2765,7 +2778,7 @@ function FusionHero(props: { team: string[]; cost: number | null; modelName: (id
       </dl>
       <p className="hero-unit">Die einzelnen Antworten kannst du unter jeder Antwort aufklappen.</p>
       <div className="hero-actions">
-        <button className="link-button" onClick={props.onChange}>
+        <button className="link-button" onClick={props.onChange} title="Statt mehrerer Modelle wieder nur eines antworten lassen">
           Ein einzelnes Modell wählen
         </button>
       </div>

@@ -104,7 +104,13 @@ export function DocumentDialog({ attachment: a, models, apiKey, bestFree, chatMo
               liest es einmal vollständig, danach arbeitet das Modell mit dem Text.
               {pages ? ` ${pages === 1 ? "1 Seite" : `${pages} Seiten`}, ca. ${cents(pages * OCR_PER_PAGE)}.` : ` Ca. ${cents(OCR_PER_PAGE)} pro Seite.`}
             </p>
-            <button className="button small" onClick={() => void run("ocr")} disabled={!!busy} aria-busy={busy === "ocr"}>
+            <button
+              className="button small"
+              onClick={() => void run("ocr")}
+              disabled={!!busy}
+              aria-busy={busy === "ocr"}
+              title="Den Text aus dem gescannten Dokument per Texterkennung herauslesen lassen; kostet ein paar Cent"
+            >
               <Icon name="search" size={15} />
               {busy === "ocr" ? "Liest …" : "Mit Texterkennung lesen"}
             </button>
@@ -131,7 +137,13 @@ export function DocumentDialog({ attachment: a, models, apiKey, bestFree, chatMo
           </label>
           {!a.summary && a.text && !a.scanned && (
             <div className="doc-summary-make">
-              <button className="button small" onClick={() => void run("summary")} disabled={!!busy || !models} aria-busy={busy === "summary"}>
+              <button
+                className="button small"
+                onClick={() => void run("summary")}
+                disabled={!!busy || !models}
+                aria-busy={busy === "summary"}
+                title="Eine Kurzfassung erstellen; das Modell bekommt dann die statt des ganzen Textes, das spart Kosten"
+              >
                 <Icon name="summary" size={15} />
                 {busy === "summary" ? "Fasst zusammen …" : "Zusammenfassung erstellen"}
               </button>
@@ -169,12 +181,12 @@ export function DocumentDialog({ attachment: a, models, apiKey, bestFree, chatMo
             <div className="field-row">
               <div className="chips" role="tablist">
                 {a.text && (
-                  <button className="chip" role="tab" aria-pressed={view === "text"} onClick={() => setView("text")}>
+                  <button className="chip" role="tab" aria-pressed={view === "text"} onClick={() => setView("text")} title="Den vollständigen Text des Dokuments zeigen">
                     Text
                   </button>
                 )}
                 {a.summary && (
-                  <button className="chip" role="tab" aria-pressed={view === "summary"} onClick={() => setView("summary")}>
+                  <button className="chip" role="tab" aria-pressed={view === "summary"} onClick={() => setView("summary")} title="Die Kurzfassung zeigen">
                     Zusammenfassung
                   </button>
                 )}
@@ -191,7 +203,7 @@ export function DocumentDialog({ attachment: a, models, apiKey, bestFree, chatMo
         )}
 
         <footer className="dialog-foot">
-          <button className="button primary" onClick={onClose} disabled={!!busy}>
+          <button className="button primary" onClick={onClose} disabled={!!busy} title="Fenster schließen">
             Fertig
           </button>
         </footer>

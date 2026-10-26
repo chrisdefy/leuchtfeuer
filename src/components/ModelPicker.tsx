@@ -548,6 +548,7 @@ export function ModelPicker(props: Props) {
                   className="chip usecase"
                   aria-pressed={useCase?.id === u.id}
                   onClick={() => chooseUseCase(useCase?.id === u.id ? null : u)}
+                  title={useCase?.id === u.id ? "Wieder alle Modelle zeigen" : `Die Modelle zeigen, die bei „${u.label}“ am meisten genutzt werden`}
                 >
                   {u.label}
                 </button>
@@ -608,7 +609,7 @@ export function ModelPicker(props: Props) {
                 {showAll ? "Übersichtlich" : `Alle Modelle (+${hiddenCount})`}
               </button>
             )}
-            <label className="sort">
+            <label className="sort" title="Reihenfolge der Liste">
               <span className="visually-hidden">Sortieren</span>
               <select value={activeSort} onChange={(e) => setSort(e.target.value as Sort)}>
                 {sorts.map((s) => (
@@ -625,7 +626,7 @@ export function ModelPicker(props: Props) {
         {!favView && area === "video" && (
           <div className="picker-toolbar">
             <p className="hint">Auswählen öffnet die Videoerstellung mit Dauer, Format und Kosten.</p>
-            <label className="sort">
+            <label className="sort" title="Reihenfolge der Liste">
               <span className="visually-hidden">Sortieren</span>
               <select value={videoSort} onChange={(e) => setVideoSort(e.target.value as VideoSort)}>
                 {VIDEO_SORTS.map((s) => (
@@ -641,7 +642,7 @@ export function ModelPicker(props: Props) {
         <div className={`picker-body${area === "video" ? " no-providers" : ""}`} hidden={favView}>
           {area !== "video" && (
             <nav className="providers" aria-label="Anbieter">
-              <button className="provider" aria-pressed={provider === null} onClick={() => setProvider(null)}>
+              <button className="provider" aria-pressed={provider === null} onClick={() => setProvider(null)} title="Modelle aller Hersteller zeigen">
                 <span>Alle Anbieter</span>
                 <span className="count">{inArea.length}</span>
               </button>
@@ -651,6 +652,7 @@ export function ModelPicker(props: Props) {
                   className="provider"
                   aria-pressed={provider === label}
                   onClick={() => setProvider(provider === label ? null : label)}
+                  title={provider === label ? "Wieder alle Hersteller zeigen" : `Nur Modelle von ${label} zeigen`}
                 >
                   <span>{label}</span>
                   <span className="count">{n}</span>
@@ -689,7 +691,7 @@ export function ModelPicker(props: Props) {
             ) : props.error ? (
               <div className="picker-empty">
                 <p>Die Modellliste konnte nicht geladen werden: {props.error}</p>
-                <button className="button" onClick={props.onRetry}>
+                <button className="button" onClick={props.onRetry} title="Die Modellliste noch einmal von OpenRouter holen">
                   Erneut laden
                 </button>
               </div>
@@ -700,7 +702,7 @@ export function ModelPicker(props: Props) {
             ) : rankError ? (
               <div className="picker-empty">
                 <p>Die Rangliste für {useCase?.label} konnte nicht geladen werden: {rankError}</p>
-                <button className="button" onClick={() => chooseUseCase(null)}>
+                <button className="button" onClick={() => chooseUseCase(null)} title="Den Filter aufheben und alle Modelle zeigen">
                   Alle Modelle zeigen
                 </button>
               </div>
@@ -1085,7 +1087,7 @@ function ModelDetail({ model: m, score, onPick }: { model: Model; score?: Scores
         </dl>
         <p className="detail-id">{m.id}</p>
       </div>
-      <button className="button primary detail-pick" onClick={onPick}>
+      <button className="button primary detail-pick" onClick={onPick} title="Dieses Modell für den Chat übernehmen">
         Mit {shortName(m)} chatten
       </button>
     </>
@@ -1109,7 +1111,7 @@ function VideoDetail({ video: v, onPick }: { video: VideoModel; onPick: () => vo
         ) : null}
         <p className="detail-id">{v.id}</p>
       </div>
-      <button className="button primary detail-pick" onClick={onPick}>
+      <button className="button primary detail-pick" onClick={onPick} title="Mit diesem Modell ein Video beschreiben und erstellen">
         Video erstellen
       </button>
     </>

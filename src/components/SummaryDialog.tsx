@@ -169,10 +169,10 @@ export function SummaryDialog({ chat, modelId, models, apiKey, buildMessages, on
               wörtlich übernommene Inhalte und offene Fragen. Zahlen, Namen und Code werden exakt übernommen.
             </p>
             <footer className="dialog-foot">
-              <button className="button" onClick={onClose}>
+              <button className="button" onClick={onClose} title="Schließen, ohne etwas zu erstellen">
                 Abbrechen
               </button>
-              <button className="button primary" onClick={write}>
+              <button className="button primary" onClick={write} title="Ein Modell schreibt eine Zusammenfassung des bisherigen Chats">
                 Zusammenfassung erstellen
               </button>
             </footer>
@@ -219,7 +219,13 @@ export function SummaryDialog({ chat, modelId, models, apiKey, buildMessages, on
                       listet, was fehlt.
                       {checkEstimate !== undefined && <> Kosten ca. {formatCost(checkEstimate)}.</>}
                     </p>
-                    <button className="button small" onClick={check} disabled={checking || !summary.trim()} aria-busy={checking}>
+                    <button
+                      className="button small"
+                      onClick={check}
+                      disabled={checking || !summary.trim()}
+                      aria-busy={checking}
+                      title="Ein zweites Modell prüft, ob in der Zusammenfassung etwas Wichtiges fehlt"
+                    >
                       <Icon name="search" size={15} />
                       {checking ? "Prüft …" : "Auf Lücken prüfen"}
                     </button>
@@ -234,10 +240,10 @@ export function SummaryDialog({ chat, modelId, models, apiKey, buildMessages, on
                     <h3>Gefundene Lücken</h3>
                     <Markdown text={gaps} />
                     <div className="gap-actions">
-                      <button className="button small" onClick={applyGaps}>
+                      <button className="button small" onClick={applyGaps} title="Die gefundenen Punkte in die Zusammenfassung aufnehmen">
                         Ergänzungen übernehmen
                       </button>
-                      <button className="link-button" onClick={() => setGaps(null)}>
+                      <button className="link-button" onClick={() => setGaps(null)} title="Die Zusammenfassung so lassen, wie sie ist">
                         Verwerfen
                       </button>
                     </div>
@@ -248,12 +254,12 @@ export function SummaryDialog({ chat, modelId, models, apiKey, buildMessages, on
 
             <footer className="dialog-foot">
               {stage === "writing" ? (
-                <button className="button" onClick={() => abort.current?.abort()}>
+                <button className="button" onClick={() => abort.current?.abort()} title="Das Schreiben abbrechen">
                   Stoppen
                 </button>
               ) : (
                 <>
-                  <button className="button" onClick={write} disabled={checking}>
+                  <button className="button" onClick={write} disabled={checking} title="Die Zusammenfassung noch einmal schreiben lassen">
                     <Icon name="refresh" size={15} />
                     Neu erzeugen
                   </button>
@@ -266,7 +272,12 @@ export function SummaryDialog({ chat, modelId, models, apiKey, buildMessages, on
                     <Icon name={copied ? "check" : "copy"} size={15} />
                     {copied ? "Kopiert" : "Kopieren"}
                   </button>
-                  <button className="button primary" onClick={() => onStart(summary.trim())} disabled={busy || !summary.trim()}>
+                  <button
+                    className="button primary"
+                    onClick={() => onStart(summary.trim())}
+                    disabled={busy || !summary.trim()}
+                    title="Mit dieser Zusammenfassung einen neuen Chat beginnen; der alte bleibt erhalten"
+                  >
                     Neuen Chat starten
                   </button>
                 </>

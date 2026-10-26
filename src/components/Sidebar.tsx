@@ -278,6 +278,7 @@ export function Sidebar(props: Props) {
                     <div className="folder-row">
                       <button
                         className="folder-link"
+                        title={`${f.collapsed ? "Aufklappen" : "Zuklappen"} (Doppelklick zum Umbenennen)`}
                         onClick={() => props.onToggleFolder(f.id)}
                         onDoubleClick={() => setRenaming({ id: f.id, value: f.name, folder: true })}
                         aria-expanded={!f.collapsed}
@@ -293,6 +294,7 @@ export function Sidebar(props: Props) {
                         <button
                           className="chat-delete chat-rename"
                           aria-label={`Ordner „${f.name}“ umbenennen`}
+                          title="Ordner umbenennen"
                           onClick={() => setRenaming({ id: f.id, value: f.name, folder: true })}
                         >
                           <Icon name="edit" size={14} />
@@ -420,6 +422,7 @@ function BackupReminder(props: { days: number | null; onBackup: () => void; onLa
           className="button primary small"
           disabled={busy}
           aria-busy={busy}
+          title="Jetzt eine Sicherungsdatei mit allen Chats herunterladen"
           onClick={() => {
             setBusy(true);
             Promise.resolve(props.onBackup()).finally(() => setBusy(false));
@@ -457,17 +460,17 @@ function MoveMenu(props: {
     <div className="move-menu" role="menu" ref={ref} onKeyDown={(e) => e.key === "Escape" && props.onClose()}>
       <p className="move-title">Verschieben nach</p>
       {props.folders.map((f) => (
-        <button key={f.id} role="menuitem" disabled={props.current === f.id} onClick={() => props.onPick(f.id)}>
+        <button key={f.id} role="menuitem" disabled={props.current === f.id} onClick={() => props.onPick(f.id)} title={`In den Ordner „${f.name}“ verschieben`}>
           <Icon name="folder" size={14} />
           {f.name}
         </button>
       ))}
       {props.current && (
-        <button role="menuitem" onClick={() => props.onPick(null)}>
+        <button role="menuitem" onClick={() => props.onPick(null)} title="Wieder lose in die Liste legen">
           Aus dem Ordner nehmen
         </button>
       )}
-      <button role="menuitem" onClick={props.onNewFolder}>
+      <button role="menuitem" onClick={props.onNewFolder} title="Einen neuen Ordner anlegen">
         <Icon name="plus" size={14} />
         Neuer Ordner …
       </button>

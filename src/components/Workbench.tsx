@@ -233,16 +233,16 @@ export function Workbench(props: Props) {
                       <span className="spinner small" aria-hidden="true" />
                       Liest deine Idee …
                     </span>
-                    <button className="button" onClick={() => abort.current?.abort()}>
+                    <button className="button" onClick={() => abort.current?.abort()} title="Abbrechen und zum vorigen Schritt zurück">
                       Stoppen
                     </button>
                   </>
                 ) : (
                   <>
-                    <button className="button" onClick={props.onClose}>
+                    <button className="button" onClick={props.onClose} title="Die Werkbank schließen">
                       Abbrechen
                     </button>
-                    <button className="button primary" onClick={() => void start()} disabled={!idea.trim()}>
+                    <button className="button primary" onClick={() => void start()} disabled={!idea.trim()} title="Ein Modell liest deine Idee und stellt dir ein paar Rückfragen">
                       <Icon name="sparkle" size={15} />
                       Weiterdenken
                     </button>
@@ -269,6 +269,7 @@ export function Workbench(props: Props) {
                         key={o}
                         type="button"
                         className="chip"
+                        title="Diese Antwort wählen oder abwählen"
                         aria-pressed={answers[i].split(/,\s*/).includes(o)}
                         onClick={() => toggleOption(i, o)}
                       >
@@ -292,13 +293,13 @@ export function Workbench(props: Props) {
               </div>
             )}
             <footer className="dialog-foot">
-              <button className="button" onClick={() => setStage("idea")}>
+              <button className="button" onClick={() => setStage("idea")} title="Zurück zu deiner Idee">
                 Zurück
               </button>
-              <button className="button" onClick={() => void write([])}>
+              <button className="button" onClick={() => void write([])} title="Ohne Antworten weiter; das Modell nimmt dann sinnvolle Annahmen">
                 Überspringen
               </button>
-              <button className="button primary" onClick={() => void write(answers)}>
+              <button className="button primary" onClick={() => void write(answers)} title="Mit deinen Antworten die Aufgabe ausformulieren lassen">
                 Weiter
               </button>
             </footer>
@@ -309,7 +310,7 @@ export function Workbench(props: Props) {
           <div className="wb-writing" role="status">
             <span className="spinner" aria-hidden="true" />
             <p>Formuliert die Aufgabe aus und sucht Rolle, Vorgehen und Modell …</p>
-            <button className="button" onClick={() => abort.current?.abort()}>
+            <button className="button" onClick={() => abort.current?.abort()} title="Abbrechen und zum vorigen Schritt zurück">
               Stoppen
             </button>
           </div>
@@ -350,7 +351,7 @@ export function Workbench(props: Props) {
                 )}
                 {brief.why && <p className="hint">{brief.why}</p>}
                 <details className="wb-system">
-                  <summary>Anweisung an das Modell ansehen und bearbeiten</summary>
+                  <summary title="Aufklappen: die Anweisung, die das Modell zu Beginn bekommt">Anweisung an das Modell ansehen und bearbeiten</summary>
                   <textarea
                     aria-label="Anweisung an das Modell"
                     rows={9}
@@ -400,15 +401,20 @@ export function Workbench(props: Props) {
             <footer className="dialog-foot spread">
               <p className="hint">{cost > 0 ? `Vorbereitung hat ${formatCost(cost)} gekostet.` : ""}</p>
               <div className="dialog-buttons">
-                <button className="button" onClick={() => setStage("idea")}>
+                <button className="button" onClick={() => setStage("idea")} title="Zurück zu deiner Idee">
                   Zurück
                 </button>
                 {brief.kind !== "video" && (
-                  <button className="button" onClick={() => finish(false)} disabled={!model || !brief.task.trim()}>
+                  <button className="button" onClick={() => finish(false)} disabled={!model || !brief.task.trim()} title="Den Chat öffnen und die Aufgabe ins Eingabefeld legen, ohne sie gleich zu senden">
                     Erst bearbeiten
                   </button>
                 )}
-                <button className="button primary" onClick={() => finish(brief.kind !== "video")} disabled={!model || !brief.task.trim()}>
+                <button
+                  className="button primary"
+                  onClick={() => finish(brief.kind !== "video")}
+                  disabled={!model || !brief.task.trim()}
+                  title={brief.kind === "video" ? "Zur Videoerstellung mit dieser Beschreibung" : "Den Chat mit dieser Aufgabe starten und gleich senden"}
+                >
                   {brief.kind === "video" ? "Weiter zum Video" : "Chat starten"}
                 </button>
               </div>

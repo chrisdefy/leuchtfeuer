@@ -364,6 +364,7 @@ export function VideoDialog(props: Props) {
               <select
                 id="video-model"
                 className="select"
+                title="Welches Modell das Video erstellt; der Preis steht dahinter"
                 value={modelId}
                 onChange={(e) => {
                   setModelId(e.target.value);
@@ -413,6 +414,7 @@ export function VideoDialog(props: Props) {
                   <button
                     type="button"
                     className="link-button"
+                    title="Deine ursprüngliche Beschreibung zurückholen"
                     onClick={() => {
                       setPrompt(original);
                       setOriginal(null);
@@ -431,6 +433,7 @@ export function VideoDialog(props: Props) {
                 <select
                   id="video-duration"
                   className="select"
+                  title="Wie lang das Video wird. Längere Videos kosten mehr."
                   value={duration ?? ""}
                   onChange={(e) => setDuration(Number(e.target.value))}
                 >
@@ -447,6 +450,7 @@ export function VideoDialog(props: Props) {
                   <select
                     id="video-resolution"
                     className="select"
+                    title="Bildschärfe. Höhere Auflösung kostet meist mehr."
                     value={resolution ?? ""}
                     onChange={(e) => setResolution(e.target.value)}
                   >
@@ -460,7 +464,7 @@ export function VideoDialog(props: Props) {
               )}
               <div className="field">
                 <label htmlFor="video-aspect">Format</label>
-                <select id="video-aspect" className="select" value={aspect} onChange={(e) => setAspect(e.target.value)}>
+                <select id="video-aspect" className="select" title="Seitenverhältnis: 16:9 quer wie Fernsehen, 9:16 hochkant wie am Handy, 1:1 quadratisch" value={aspect} onChange={(e) => setAspect(e.target.value)}>
                   {(model?.supported_aspect_ratios ?? DEFAULT_ASPECTS).map((a) => (
                     <option key={a} value={a}>
                       {a}
@@ -493,6 +497,7 @@ export function VideoDialog(props: Props) {
                         value={roleOf(img.id)}
                         onChange={(e) => setRole(img.id, e.target.value as ImageRole)}
                         aria-label={`Rolle von ${img.name}`}
+                        title="Ob das Foto der Anfang, das Ende oder eine Vorlage für das Video ist"
                       >
                         <option value="none">Nicht verwenden</option>
                         <option value="first" disabled={!allowed("first")}>
@@ -527,7 +532,7 @@ export function VideoDialog(props: Props) {
                   e.target.value = "";
                 }}
               />
-              <button type="button" className="ghost small" onClick={() => fileInput.current?.click()}>
+              <button type="button" className="ghost small" onClick={() => fileInput.current?.click()} title="Ein Foto als Start- oder Endbild des Videos hinzufügen">
                 <Icon name="plus" size={14} />
                 Foto hinzufügen
               </button>
@@ -546,12 +551,13 @@ export function VideoDialog(props: Props) {
                 Die Erstellung dauert meist einige Minuten. Du kannst währenddessen weiterchatten.
               </p>
               <div className="dialog-buttons">
-                <button type="button" className="button" onClick={onClose}>
+                <button type="button" className="button" onClick={onClose} title="Schließen, ohne ein Video zu erstellen">
                   Abbrechen
                 </button>
                 <button
                   type="submit"
                   className="button primary"
+                  title="Das Video in Auftrag geben; es erscheint im Chat, sobald es fertig ist"
                   disabled={!model || !prompt.trim() || enhancing || !!roleProblem}
                 >
                   Video erstellen

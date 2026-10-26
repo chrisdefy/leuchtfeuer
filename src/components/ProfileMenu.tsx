@@ -61,6 +61,7 @@ export function ProfileMenu(props: Props) {
             <button
               role="menuitem"
               className="tier-all"
+              title="Das Profil für diesen Chat ablegen; es gilt dann nur die normale Anweisung"
               onClick={() => {
                 props.onChoose(null);
                 setOpen(false);
@@ -73,6 +74,7 @@ export function ProfileMenu(props: Props) {
           <button
             role="menuitem"
             className="tier-all"
+            title="Profile anlegen, ändern oder löschen"
             onClick={() => {
               setOpen(false);
               props.onManage();

@@ -144,6 +144,7 @@ export function TierMenu(props: Props) {
             <button
               role="menuitem"
               className="tier-all"
+              title="Die Auswahl aller Modelle mit Preisen öffnen, um selbst zu wählen"
               onClick={() => {
                 setOpen(false);
                 props.onAllModels!();

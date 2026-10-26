@@ -113,7 +113,7 @@ export function RoomSettings({ room, models, onApply, onEditParticipant, onAddPa
           <div className="field-grid">
             <div className="field">
               <label htmlFor="rs-order">Reihenfolge</label>
-              <select id="rs-order" className="select" value={rules.order} onChange={(e) => set({ order: e.target.value as Order })}>
+              <select id="rs-order" className="select" title="Wer als Nächstes spricht" value={rules.order} onChange={(e) => set({ order: e.target.value as Order })}>
                 {Object.entries(ORDERS).map(([id, l]) => (
                   <option key={id} value={id}>
                     {l}
@@ -170,7 +170,7 @@ export function RoomSettings({ room, models, onApply, onEditParticipant, onAddPa
                     {p.paused && " · pausiert"}
                   </span>
                 </span>
-                <button type="button" className="ghost small" onClick={() => onEditParticipant(p.id)}>
+                <button type="button" className="ghost small" onClick={() => onEditParticipant(p.id)} title="Rolle, Modell, Länge oder Stimme dieser Figur ändern">
                   Bearbeiten
                 </button>
               </li>
@@ -179,6 +179,7 @@ export function RoomSettings({ room, models, onApply, onEditParticipant, onAddPa
           <button
             type="button"
             className="ghost small"
+            title="Eine weitere KI-Figur ins Gespräch holen (höchstens 6)"
             onClick={onAddParticipant}
             disabled={room.participants.filter((p) => !p.human).length >= 6}
           >
@@ -201,12 +202,13 @@ export function RoomSettings({ room, models, onApply, onEditParticipant, onAddPa
                 Gespräch. Du findest die Vorlage beim Erstellen eines Chatrooms unter „Meine Vorlagen“.
               </p>
               <div className="dialog-buttons">
-                <button type="button" className="button small" onClick={() => setTemplateName(null)}>
+                <button type="button" className="button small" onClick={() => setTemplateName(null)} title="Keine Vorlage speichern">
                   Abbrechen
                 </button>
                 <button
                   type="button"
                   className="button small primary"
+                  title="Diesen Aufbau unter dem Namen als Vorlage speichern"
                   disabled={!templateName.trim()}
                   onClick={() => {
                     onSaveTemplate(templateName, download, rules);
@@ -221,18 +223,18 @@ export function RoomSettings({ room, models, onApply, onEditParticipant, onAddPa
 
           <footer className="dialog-foot spread">
             {templateName === null ? (
-              <button type="button" className="button" onClick={() => setTemplateName(room.title)}>
+              <button type="button" className="button" onClick={() => setTemplateName(room.title)} title="Teilnehmer, Thema und Regeln als Vorlage für neue Räume speichern, ohne das Gespräch">
                 Als Vorlage speichern …
               </button>
             ) : (
               <span />
             )}
             <div className="dialog-buttons">
-              <button type="button" className="button" onClick={onClose}>
+              <button type="button" className="button" onClick={onClose} title={changed ? "Schließen, ohne die Änderungen zu übernehmen" : "Fenster schließen"}>
                 {changed ? "Verwerfen" : "Schließen"}
               </button>
               {changed && (
-                <button type="submit" className="button primary" disabled={!rules.topic.trim()}>
+                <button type="submit" className="button primary" disabled={!rules.topic.trim()} title="Die Änderungen gelten ab dem nächsten Beitrag">
                   Übernehmen
                 </button>
               )}

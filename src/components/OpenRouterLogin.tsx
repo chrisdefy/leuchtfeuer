@@ -51,7 +51,14 @@ export function OpenRouterLogin({ onKey, primary, label = "Mit OpenRouter anmeld
   return (
     <div className="or-login">
       {redirect ? (
-        <button type="button" className={`button${primary ? " primary" : ""}`} onClick={() => void begin()} disabled={busy} aria-busy={busy}>
+        <button
+          type="button"
+          className={`button${primary ? " primary" : ""}`}
+          onClick={() => void begin()}
+          disabled={busy}
+          aria-busy={busy}
+          title="Zu openrouter.ai wechseln, anmelden oder ein Konto anlegen; danach kommst du automatisch zurück"
+        >
           <Icon name="login" size={16} />
           {busy ? "Weiter zu OpenRouter …" : label}
         </button>
@@ -62,6 +69,7 @@ export function OpenRouterLogin({ onKey, primary, label = "Mit OpenRouter anmeld
           target="_blank"
           rel="noopener"
           aria-disabled={!codeLink}
+          title="Öffnet openrouter.ai in einem neuen Tab; dort anmelden und den Code hierher kopieren"
           onClick={() => {
             setError(null);
             setWaitingForCode(true);
@@ -94,7 +102,7 @@ export function OpenRouterLogin({ onKey, primary, label = "Mit OpenRouter anmeld
               placeholder="Code einfügen"
               onChange={(e) => setCode(e.target.value)}
             />
-            <button type="submit" className="button primary" disabled={busy || !code.trim()} aria-busy={busy}>
+            <button type="submit" className="button primary" disabled={busy || !code.trim()} aria-busy={busy} title="Mit dem eingefügten Code bei OpenRouter anmelden">
               {busy ? "Prüft …" : "Verbinden"}
             </button>
           </div>

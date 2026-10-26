@@ -792,7 +792,7 @@ export function RoomView(props: Props) {
                   </span>
                 </button>
                 {room.order === "manual" && !p.human && !p.paused && (
-                  <button className="button small speak-now" onClick={() => step(p)} disabled={!!speaking}>
+                  <button className="button small speak-now" onClick={() => step(p)} disabled={!!speaking} title="Diese Figur spricht als Nächstes">
                     Sprechen lassen
                   </button>
                 )}
@@ -801,6 +801,7 @@ export function RoomView(props: Props) {
           })}
           <button
             className="ghost small add-person"
+            title="Eine weitere KI-Figur ins Gespräch holen (höchstens 6)"
             onClick={startAdding}
             disabled={room.participants.filter((p) => !p.human).length >= 6}
           >
@@ -819,7 +820,7 @@ export function RoomView(props: Props) {
             <p>{room.topic}</p>
             {room.cast && (
               <details className="room-cast">
-                <summary>Wer ist wer</summary>
+                <summary title="Aufklappen: wer welche Rolle hat und wie die Figuren zueinander stehen">Wer ist wer</summary>
                 <Markdown text={room.cast} />
               </details>
             )}
@@ -915,7 +916,7 @@ export function RoomView(props: Props) {
         <SpeechBar />
         <p className="room-status" aria-live="polite">
           {waitUntil && (
-            <button className="link-button" onClick={() => skipWait.current?.()}>
+            <button className="link-button" onClick={() => skipWait.current?.()} title="Nicht warten, der nächste Beitrag kommt sofort">
               Jetzt
             </button>
           )}
@@ -1013,7 +1014,7 @@ export function RoomView(props: Props) {
             Automatisch vorlesen
           </label>
 
-          <label className="room-order">
+          <label className="room-order" title="Wer als Nächstes spricht">
             <span className="visually-hidden">Reihenfolge</span>
             <select className="select" value={room.order} onChange={(e) => update((r) => ({ ...r, order: e.target.value as Order }))}>
               {Object.entries(ORDERS).map(([id, l]) => (
@@ -1071,7 +1072,7 @@ export function RoomView(props: Props) {
       {templateNotice && (
         <div className="toast" role="status">
           <span>{templateNotice}</span>
-          <button className="link-button" onClick={() => setTemplateNotice(null)}>
+          <button className="link-button" onClick={() => setTemplateNotice(null)} title="Hinweis schließen">
             OK
           </button>
         </div>
@@ -1117,6 +1118,7 @@ export function RoomView(props: Props) {
                   <select
                     id="p-voice"
                     className="select"
+                    title="Mit welcher Stimme die Beiträge dieser Figur vorgelesen werden"
                     value={editingP.voice ?? ""}
                     onChange={(e) => editParticipant(editingP.id, { voice: e.target.value || undefined })}
                   >
@@ -1130,7 +1132,7 @@ export function RoomView(props: Props) {
                 </div>
                 {editingP.roleId !== "custom" && (
                   <details className="role-text">
-                    <summary>Anweisung der Rolle ansehen</summary>
+                    <summary title="Aufklappen: die Anweisung, nach der die KI diese Rolle spielt">Anweisung der Rolle ansehen</summary>
                     <p>{editingP.rolePrompt}</p>
                   </details>
                 )}
@@ -1149,12 +1151,13 @@ export function RoomView(props: Props) {
                 <button
                   className="button"
                   onClick={() => editParticipant(editingP.id, { paused: !editingP.paused })}
+                  title={editingP.paused ? "Die Figur spricht wieder mit" : "Die Figur setzt aus, bis du sie wieder mitmachen lässt"}
                   disabled={!editingP.paused && room.participants.filter((p) => !p.human && !p.paused).length <= 1 && !editingP.human}
                 >
                   {editingP.paused ? "Wieder mitmachen lassen" : "Pausieren"}
                 </button>
               </div>
-              <button className="button primary" onClick={() => setEditing(null)}>
+              <button className="button primary" onClick={() => setEditing(null)} title="Fenster schließen; Änderungen gelten ab dem nächsten Beitrag">
                 Fertig
               </button>
             </footer>
@@ -1186,10 +1189,10 @@ export function RoomView(props: Props) {
               </p>
             )}
             <footer className="dialog-foot">
-              <button className="button" onClick={() => setAdding(null)}>
+              <button className="button" onClick={() => setAdding(null)} title="Niemanden hinzufügen">
                 Abbrechen
               </button>
-              <button className="button primary" onClick={confirmAdd} disabled={!adding.name.trim()}>
+              <button className="button primary" onClick={confirmAdd} disabled={!adding.name.trim()} title="Die Figur ins Gespräch holen; sie spricht ab der nächsten Runde mit">
                 Hinzufügen
               </button>
             </footer>
@@ -1219,12 +1222,13 @@ export function RoomView(props: Props) {
                 <button
                   className="button"
                   disabled={!protocol.text || protocol.loading}
+                  title="Das Protokoll in die Zwischenablage kopieren"
                   onClick={() => navigator.clipboard.writeText(protocol.text)}
                 >
                   <Icon name="copy" size={15} />
                   Kopieren
                 </button>
-                <button className="button primary" onClick={() => setProtocol(null)} disabled={protocol.loading}>
+                <button className="button primary" onClick={() => setProtocol(null)} disabled={protocol.loading} title="Fenster schließen">
                   Schließen
                 </button>
               </div>
@@ -1339,33 +1343,33 @@ function HaltCard(props: {
         <p>{halt.reason}</p>
         <div className="room-halt-actions">
           {halt.fix === "rounds" && (
-            <button className="button small primary" onClick={props.onReview}>
+            <button className="button small primary" onClick={props.onReview} title="Ein unabhängiges Modell bewertet das Gespräch und zieht ein Fazit">
               <Icon name="sparkle" size={14} />
               Bewertung und Fazit
             </button>
           )}
           {halt.fix === "rounds" && (
-            <button className="button small" onClick={props.onMoreRounds}>
+            <button className="button small" onClick={props.onMoreRounds} title="Das Gespräch zwei weitere Runden laufen lassen">
               2 Runden mehr
             </button>
           )}
           {halt.fix === "budget" && (
-            <button className="button small primary" onClick={props.onMoreBudget}>
+            <button className="button small primary" onClick={props.onMoreBudget} title="Das Kostenlimit dieses Raums um 50 Cent anheben und weitermachen">
               Budget um 0,50 $ erhöhen
             </button>
           )}
           {halt.retry && (
-            <button className="button small primary" onClick={props.onRetry}>
+            <button className="button small primary" onClick={props.onRetry} title="Den Beitrag noch einmal anfordern">
               Erneut versuchen
             </button>
           )}
           {halt.retry && (
-            <button className="button small" onClick={props.onChangeModel}>
+            <button className="button small" onClick={props.onChangeModel} title="Dieser Figur ein anderes Modell geben">
               Anderes Modell wählen
             </button>
           )}
           {!halt.fix && (
-            <button className="button small" onClick={props.onDismiss}>
+            <button className="button small" onClick={props.onDismiss} title="Hinweis schließen">
               Verstanden
             </button>
           )}
@@ -1396,7 +1400,11 @@ function GoalCard(props: { text: string; running: boolean; onReview: () => void;
           {props.running && " Das Gespräch läuft weiter, du kannst jederzeit eingreifen oder es beenden."}
         </p>
         <div className="room-halt-actions">
-          <button className="button small primary" onClick={props.onReview}>
+          <button
+            className="button small primary"
+            onClick={props.onReview}
+            title={props.running ? "Das Gespräch anhalten und von einem unabhängigen Modell bewerten lassen" : "Ein unabhängiges Modell bewertet das Gespräch und zieht ein Fazit"}
+          >
             <Icon name="sparkle" size={14} />
             {props.running ? "Beenden und bewerten" : "Bewertung und Fazit"}
           </button>
@@ -1430,11 +1438,11 @@ function ExportMenu(props: { disabled: boolean; onText: () => void; onAudio: () 
       </button>
       {open && (
         <div className="more-menu down" role="menu" onClick={() => setOpen(false)}>
-          <button role="menuitem" onClick={props.onText}>
+          <button role="menuitem" onClick={props.onText} title="Das Gespräch als Textdatei herunterladen">
             <Icon name="file" size={16} />
             Als Text (Markdown)
           </button>
-          <button role="menuitem" onClick={props.onAudio}>
+          <button role="menuitem" onClick={props.onAudio} title="Das Gespräch mit eigenen Stimmen als MP3-Datei vertonen lassen">
             <Icon name="speaker" size={16} />
             Als Hörspiel (MP3)
           </button>

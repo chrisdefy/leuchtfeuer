@@ -105,7 +105,7 @@ export function MessageView(props: Props) {
 
       {m.reasoning && (
         <details className="reasoning" open={streaming && !m.content}>
-          <summary>{streaming && !m.content ? "Denkt nach …" : "Gedankengang"}</summary>
+          <summary title="Aufklappen: wie das Modell über die Antwort nachgedacht hat">{streaming && !m.content ? "Denkt nach …" : "Gedankengang"}</summary>
           <div className="reasoning-text">{m.reasoning}</div>
         </details>
       )}
@@ -293,6 +293,7 @@ function PassageEditor({ children, onEdit }: { children: ReactNode; onEdit: (mar
       {marked && !asking && (
         <button
           className="passage-trigger"
+          title="Nur die markierte Stelle neu schreiben lassen"
           style={{ left: marked.x, top: marked.y }}
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setAsking(true)}
@@ -318,7 +319,7 @@ function PassageEditor({ children, onEdit }: { children: ReactNode; onEdit: (mar
               aria-label="Was soll an der markierten Stelle anders werden?"
               disabled={busy}
             />
-            <button className="button primary small" type="submit" disabled={busy || !instruction.trim()} aria-busy={busy}>
+            <button className="button primary small" type="submit" disabled={busy || !instruction.trim()} aria-busy={busy} title="Die markierte Stelle so neu schreiben lassen">
               {busy ? "Wird geändert …" : "Ändern"}
             </button>
             <button type="button" className="ghost icon-only" onClick={close} aria-label="Abbrechen">
@@ -416,13 +417,13 @@ function FusionAnswers(props: { answers: FusionAnswer[]; merger?: string; modelN
   const used = props.answers.filter((a) => a.content.trim()).length;
   return (
     <details className="fusion">
-      <summary>
+      <summary title="Aufklappen: die einzelnen Antworten, aus denen diese zusammengeführt wurde">
         Aus {used} Antworten zusammengeführt{props.merger ? ` von ${props.modelName(props.merger)}` : ""}
       </summary>
       <div className="fusion-list">
         {props.answers.map((a) => (
           <details key={a.model} className="fusion-answer">
-            <summary>
+            <summary title="Aufklappen: die Antwort dieses Modells">
               <span className="fusion-model">{props.modelName(a.model)}</span>
               {a.cost !== undefined && <span className="by-cost">{formatCost(a.cost)}</span>}
               {a.error && <span className="fusion-error">nicht geantwortet</span>}

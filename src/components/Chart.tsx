@@ -52,6 +52,7 @@ export function Chart({ spec }: { spec: ChartSpec }) {
         {!table && (
           <button
             className="ghost small"
+            title="Das Diagramm als Bilddatei speichern, die sich ohne Qualitätsverlust vergrößern lässt"
             onClick={() => {
               const el = box.current?.querySelector("svg");
               if (el) downloadSvg(el, spec.title ?? "Diagramm");
@@ -60,7 +61,7 @@ export function Chart({ spec }: { spec: ChartSpec }) {
             Als SVG herunterladen
           </button>
         )}
-        <button className="ghost small" onClick={() => setTable(!table)}>
+        <button className="ghost small" onClick={() => setTable(!table)} title={table ? "Wieder als Diagramm zeigen" : "Die Zahlen hinter dem Diagramm als Tabelle zeigen"}>
           {table ? "Als Grafik" : "Als Tabelle"}
         </button>
       </div>

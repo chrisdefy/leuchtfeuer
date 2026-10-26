@@ -122,7 +122,7 @@ export function AudioPlayer({ attachment: a }: { attachment: Attachment }) {
 export function SourceList({ sources }: { sources: Source[] }) {
   return (
     <details className="sources">
-      <summary>
+      <summary title="Aufklappen: die Webseiten, aus denen die Antwort stammt">
         <Icon name="globe" size={14} />
         {sources.length === 1 ? "1 Quelle" : `${sources.length} Quellen`}
       </summary>

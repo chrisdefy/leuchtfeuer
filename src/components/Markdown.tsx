@@ -58,6 +58,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       className="ghost small"
+      title="In die Zwischenablage kopieren"
       onClick={async () => {
         await navigator.clipboard.writeText(text);
         setCopied(true);
@@ -80,7 +81,7 @@ function TextCard({ text }: { text: string }) {
       <div className="textcard-body">{text}</div>
       <div className="textcard-bar">
         <CopyButton text={text} />
-        <button className="ghost small" onClick={() => downloadText(`${textFileName(text)}.txt`, text, "text/plain")}>
+        <button className="ghost small" onClick={() => downloadText(`${textFileName(text)}.txt`, text, "text/plain")} title="Diesen Text als Textdatei herunterladen">
           <Icon name="download" size={14} />
           Als .txt speichern
         </button>

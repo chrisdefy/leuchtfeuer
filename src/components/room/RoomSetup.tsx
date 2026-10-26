@@ -525,7 +525,7 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
                 <span key={a.id} className="draft-doc">
                   <AttachmentChip attachment={a} onRemove={drafting ? undefined : () => removeDoc(a)} />
                   {a.scanned && !a.summary && (
-                    <button type="button" className="link-button" onClick={() => void improveDoc(a, "ocr")} disabled={docsBusy}>
+                    <button type="button" className="link-button" onClick={() => void improveDoc(a, "ocr")} disabled={docsBusy} title="Den Text aus dem gescannten Dokument per Texterkennung herauslesen lassen">
                       {docWork === a.id ? "Liest …" : "Eingescannt: mit Texterkennung lesen (ca. 0,2 Cent pro Seite)"}
                     </button>
                   )}
@@ -550,6 +550,7 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
                   type="button"
                   className="link-button"
                   disabled={docsBusy}
+                  title="Das längste Dokument kürzen lassen, damit alles zusammen passt"
                   onClick={() => {
                     const longest = [...docs].filter((a) => a.text && !a.summary).sort((x, y) => (y.text?.tokens ?? 0) - (x.text?.tokens ?? 0))[0];
                     if (longest) void improveDoc(longest, "summary");
@@ -579,13 +580,14 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
               )}
               <div className="situation-buttons">
                 {drafting && (
-                  <button type="button" className="button" onClick={cancelDraft}>
+                  <button type="button" className="button" onClick={cancelDraft} title="Das Entwerfen der Rollen abbrechen">
                     Abbrechen
                   </button>
                 )}
                 <button
                   type="submit"
                   className="button primary"
+                  title="Aus deiner Beschreibung passende Figuren mit Rollen und Modellen entwerfen lassen"
                   disabled={(!situation.trim() && !readable.length) || !!drafting || !models || docsBusy || docsTooLong}
                   aria-busy={!!drafting}
                 >
@@ -597,7 +599,7 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
             {draftError && (
               <p className="hint error-text">
                 {draftError}{" "}
-                <button type="button" className="link-button" onClick={() => void draftScenario()}>
+                <button type="button" className="link-button" onClick={() => void draftScenario()} title="Die Rollen noch einmal entwerfen lassen">
                   Erneut versuchen
                 </button>
               </p>
@@ -624,7 +626,7 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
               <h3 id="my-templates" className="scenarios-or">
                 Meine Vorlagen
               </h3>
-              <button type="button" className="ghost small" onClick={() => importInput.current?.click()}>
+              <button type="button" className="ghost small" onClick={() => importInput.current?.click()} title="Eine gespeicherte Vorlagen-Datei einlesen, zum Beispiel von einem anderen Computer">
                 <Icon name="upload" size={14} />
                 Aus Datei laden
               </button>
@@ -689,7 +691,13 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
               <span className="pfield-label">Modelle für alle</span>
               <div className="chips" role="group" aria-label="Preisstufe">
                 {(Object.keys(TIERS) as Tier[]).map((t) => (
-                  <button key={t} className="chip" aria-pressed={tier === t} onClick={() => applyTier(t)}>
+                  <button
+                    key={t}
+                    className="chip"
+                    aria-pressed={tier === t}
+                    onClick={() => applyTier(t)}
+                    title={`Allen Figuren Modelle der Stufe „${TIERS[t].label}“ geben`}
+                  >
                     {TIERS[t].label}
                   </button>
                 ))}
@@ -725,10 +733,10 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
                           Dabei
                         </label>
                         <span className="chips" role="group" aria-label={`Wer spielt ${p.name}`}>
-                          <button type="button" className="chip" aria-pressed={!p.human} onClick={() => p.human && playedBy(p.id, false)}>
+                          <button type="button" className="chip" aria-pressed={!p.human} onClick={() => p.human && playedBy(p.id, false)} title="Eine KI spricht diese Figur">
                             KI spielt
                           </button>
-                          <button type="button" className="chip" aria-pressed={!!p.human} onClick={() => !p.human && playedBy(p.id, true)}>
+                          <button type="button" className="chip" aria-pressed={!!p.human} onClick={() => !p.human && playedBy(p.id, true)} title="Du spielst diese Figur selbst und schreibst ihre Beiträge">
                             Ich spiele
                           </button>
                         </span>
@@ -761,7 +769,7 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
               })}
             </ul>
             <div className="setup-actions">
-              <button className="ghost small" onClick={addParticipant} disabled={ai.length >= 6}>
+              <button className="ghost small" onClick={addParticipant} disabled={ai.length >= 6} title="Eine weitere KI-Figur hinzufügen (höchstens 6)">
                 <Icon name="plus" size={14} />
                 KI-Teilnehmer hinzufügen
               </button>
@@ -779,10 +787,10 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
             )}
 
             <footer className="dialog-foot spread">
-              <button className="button" onClick={() => setStep(1)}>
+              <button className="button" onClick={() => setStep(1)} title="Zurück zur Beschreibung der Situation">
                 Zurück
               </button>
-              <button className="button primary" onClick={() => setStep(3)} disabled={tooFew || tooMany || missing.length > 0}>
+              <button className="button primary" onClick={() => setStep(3)} disabled={tooFew || tooMany || missing.length > 0} title="Weiter zu Thema, Ziel und Regeln">
                 Weiter
               </button>
             </footer>
@@ -827,6 +835,7 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
                 <button
                   type="button"
                   className="link-button"
+                  title="Deinen eigenen Text wiederherstellen"
                   onClick={() => {
                     setTopic(before.topic);
                     setGoal(before.goal);
@@ -866,7 +875,7 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
             <div className="field-grid">
               <div className="field">
                 <label htmlFor="room-order">Reihenfolge</label>
-                <select id="room-order" className="select" value={order} onChange={(e) => setOrder(e.target.value as Order)}>
+                <select id="room-order" className="select" title="Wer als Nächstes spricht" value={order} onChange={(e) => setOrder(e.target.value as Order)}>
                   {Object.entries(ORDERS).map(([id, l]) => (
                     <option key={id} value={id}>
                       {l}
@@ -912,10 +921,10 @@ export function RoomSetup({ models, apiKey, favorites, recents, onToggleFavorite
             </p>
 
             <footer className="dialog-foot spread">
-              <button type="button" className="button" onClick={() => setStep(2)}>
+              <button type="button" className="button" onClick={() => setStep(2)} title="Zurück zu den Teilnehmern">
                 Zurück
               </button>
-              <button type="submit" className="button primary" disabled={!topic.trim() || missing.length > 0 || tooFew || tooMany}>
+              <button type="submit" className="button primary" disabled={!topic.trim() || missing.length > 0 || tooFew || tooMany} title="Den Raum anlegen; das Gespräch startest du dann mit Play">
                 Raum erstellen
               </button>
             </footer>
