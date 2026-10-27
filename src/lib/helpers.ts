@@ -50,7 +50,7 @@ export function smartest(
   const pool = models
     .filter(
       (m) =>
-        candidate(m, now, isUncensored) &&
+        candidate(m, now, isUncensored, models) &&
         iq(m) !== undefined &&
         blendedPrice(m) <= cap &&
         m.context_length >= (opts.minContext ?? 0) &&

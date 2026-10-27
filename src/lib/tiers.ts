@@ -21,15 +21,35 @@ export const PRICE_CAP: Record<Exclude<TierId, "free">, number> = { light: 0.6, 
 
 const YEAR = 365 * 86_400;
 
+const SNAPSHOT = /-(\d{4}|\d{8})$/;
+const superseded = new WeakMap<Model[], Set<string>>();
+
+/**
+ * Dated snapshots ("…-0731", "…-20250514") that the catalog also lists, as new or newer, under the plain name.
+ * A date alone says nothing: "deepseek-v4.1-flash-1017" or "mistral-small-2603" are the current releases.
+ */
+function supersededSnapshots(models: Model[]) {
+  let out = superseded.get(models);
+  if (!out) {
+    const created = new Map(models.map((m) => [m.id, m.created]));
+    out = new Set(
+      models.filter((m) => SNAPSHOT.test(m.id) && (created.get(m.id.replace(SNAPSHOT, "")) ?? -Infinity) >= m.created).map((m) => m.id),
+    );
+    superseded.set(models, out);
+  }
+  return out;
+}
+
 /** Ordinary chat models: text in and out, no variant, no router, no filter, not hidden behind the 18+ opt-in. */
-export function candidate(m: Model, now: number, excluded: (m: Model) => boolean) {
+export function candidate(m: Model, now: number, excluded: (m: Model) => boolean, catalog: Model[]) {
   const out = m.architecture?.output_modalities ?? ["text"];
   return (
     out.every((o) => o === "text") &&
     !m.id.includes(":") &&
     !m.id.startsWith("openrouter/") &&
     !isClassifier(m.id) &&
-    !/-preview\b|-\d{4}$|-\d{8}$/.test(m.id) &&
+    !/-preview\b/.test(m.id) &&
+    !supersededSnapshots(catalog).has(m.id) &&
     !isFree(m) &&
     !itemPrice(m) &&
     Number.isFinite(blendedPrice(m)) &&
@@ -49,7 +69,7 @@ export function autoTiers(
   const free = bestFreeModel(models, scores).id;
   if (!models) return { free, light: undefined, standard: undefined, strong: undefined };
   const now = Date.now() / 1000;
-  const pool = models.filter((m) => candidate(m, now, excluded));
+  const pool = models.filter((m) => candidate(m, now, excluded, models));
   const iq = (m: Model) => scoreOf(m, scores)?.intelligence;
   // Smartest within the budget; on a tie the cheaper one.
   const best = (cap: number): Model | undefined =>
@@ -77,6 +97,28 @@ export function autoTiers(
 }
 
 export const FRONTIER = ["anthropic/", "openai/", "google/", "x-ai/"];
+
+const NEW_DAYS = 30;
+
+/**
+ * Chat models from the last 30 days that have no benchmark score yet, newest first. The levels choose by
+ * score, so these would stay invisible until the benchmark catches up; the level menu lists them apart.
+ * Empty without scores, when every model is unrated.
+ */
+export function unratedModels(models: Model[] | null, scores: Map<string, Scores> | null, excluded: (m: Model) => boolean, max = 3) {
+  if (!models || !scores?.size) return [];
+  const now = Date.now() / 1000;
+  return models
+    .filter(
+      (m) =>
+        now - m.created < NEW_DAYS * 86_400 &&
+        candidate(m, now, excluded, models) &&
+        blendedPrice(m) <= PRICE_CAP.strong &&
+        scoreOf(m, scores)?.intelligence === undefined,
+    )
+    .sort((a, b) => b.created - a.created)
+    .slice(0, max);
+}
 
 /** Levels with the user's fixed choices from the settings taking precedence. */
 export function resolveTiers(

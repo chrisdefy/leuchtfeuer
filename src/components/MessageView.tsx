@@ -149,6 +149,12 @@ export function MessageView(props: Props) {
       {m.fusion && !streaming && <FusionAnswers answers={m.fusion.answers} merger={m.model} modelName={modelName} />}
       {m.sources && m.sources.length > 0 && !streaming && <SourceList sources={m.sources} />}
       {m.links && !streaming && <LinkNote links={m.links} />}
+      {m.notice && !streaming && (
+        <p className="link-note warn">
+          <Icon name={/Web|Internet/.test(m.notice) ? "globe" : "refresh"} size={14} />
+          <span>{m.notice}</span>
+        </p>
+      )}
 
       {m.error && (
         <div className="msg-error" role="alert">

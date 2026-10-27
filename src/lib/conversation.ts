@@ -95,6 +95,7 @@ export function attributeHistory(
 ): { note: string | null; messages: { role: "user" | "assistant"; content: string; attachments?: Attachment[] }[] } {
   let foreign = false;
   const messages = history
+    .map((m) => (m.role === "assistant" && !m.content ? { ...m, content: mediaNote(m) } : m))
     .filter((m) => m.content || (m.role === "user" && m.attachments?.length))
     .map((m) => {
       const author = answeredBy(m);
@@ -113,6 +114,18 @@ export function attributeHistory(
     "Behandle sie als Beiträge Dritter: Du darfst darauf aufbauen, sie prüfen, korrigieren oder ihnen widersprechen. " +
     "Beginne deine eigene Antwort ohne ein solches Präfix.";
   return { note, messages };
+}
+
+/**
+ * An answer that is only a picture, a video or sound has no text. Without a note it vanished from the history,
+ * and the next model did not know that anything had been made.
+ */
+function mediaNote(m: Message) {
+  const kinds = new Set((m.attachments ?? []).map((a) => a.kind));
+  if (m.video?.status === "completed" || kinds.has("video")) return "[Hier wurde ein Video erzeugt und im Chat gezeigt.]";
+  if (kinds.has("image")) return "[Hier wurde ein Bild erzeugt und im Chat gezeigt.]";
+  if (kinds.has("audio")) return "[Hier wurde Audio erzeugt und im Chat abgespielt.]";
+  return "";
 }
 
 /** Images the model generated most recently, so an image model can edit its last picture. */

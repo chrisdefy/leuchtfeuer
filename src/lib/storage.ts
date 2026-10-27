@@ -23,6 +23,8 @@ export interface Message {
   revisions?: string[];
   /** Links from the question the model was allowed to open; `opened` = pages fetched, if OpenRouter reports it. */
   links?: { urls: string[]; opened?: number; unsupported?: boolean };
+  /** Plain note under the answer, e.g. that another model stepped in or that the web was not searched. */
+  notice?: string;
   /** Set while (and after) a video is generated for this message. */
   video?: {
     jobId: string;
@@ -91,8 +93,8 @@ export interface Chat {
   prep?: { role: string; approach: string; system: string };
   /** Profile the chat works with; the instruction is kept as it was when chosen. */
   profile?: { id: string; name: string; system: string };
-  /** "Beste Antwort": several models answer and the strongest merges their answers. */
-  fusion?: boolean;
+  /** "Beste Antwort": several models answer and the strongest merges their answers; "open" = with open models. */
+  fusion?: boolean | "open";
   messages: Message[];
   createdAt: number;
   updatedAt: number;
@@ -226,7 +228,7 @@ export interface Draft {
   web?: boolean | null;
   visual?: boolean | null;
   reasoning?: "low" | "high";
-  fusion?: boolean | null;
+  fusion?: boolean | "open" | null;
   /** Profile chosen for the new chat; null = none on purpose. */
   profile?: string | null;
 }
@@ -260,6 +262,22 @@ export function isEmptyDraft(d: Draft) {
   return (
     !d.text.trim() && !d.files.length && !d.lanes && d.web == null && d.visual == null && !d.reasoning && d.fusion == null && d.profile === undefined
   );
+}
+
+const ACTIVE = "router.active.v1";
+/** How long the chat last on screen is reopened at start; after that the app starts with a new chat. */
+const REOPEN_MS = 60 * 60 * 1000;
+
+export function rememberChat(id: string | null) {
+  write(ACTIVE, { id, at: Date.now() });
+}
+
+/** The chat that was on screen before a reload, if it was used within the last hour. */
+export function recentChat(chats: Chat[]): string | null {
+  const last = read<{ id?: string | null; at?: number }>(ACTIVE, {});
+  const chat = last.id ? chats.find((c) => c.id === last.id) : undefined;
+  if (!chat) return null;
+  return Date.now() - Math.max(last.at ?? 0, chat.updatedAt) < REOPEN_MS ? chat.id : null;
 }
 
 export function uid() {

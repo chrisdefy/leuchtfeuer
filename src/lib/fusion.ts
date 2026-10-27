@@ -11,24 +11,42 @@ import { FRONTIER, PRICE_CAP, candidate, typicalAnswerUsd } from "./tiers";
 
 export const TEAM_SIZE = 3;
 
+/** Which team writes the "Beste Antwort": the strongest models, or open ones at a fraction of the price. */
+export type FusionMode = true | "open";
+
 export const FUSION_INFO = {
   label: "Beste Antwort",
   hint: "Drei starke Modelle verschiedener Hersteller antworten, das klügste macht daraus eine Antwort. Für wichtige Fragen.",
 };
 
+export const FUSION_OPEN_INFO = {
+  label: "Beste Antwort sparsam",
+  hint: "Drei offene Modelle verschiedener Hersteller antworten, das klügste macht daraus eine Antwort. Etwas schwächer, kostet aber nur einen Bruchteil.",
+};
+
+export const fusionInfo = (mode?: FusionMode) => (mode === "open" ? FUSION_OPEN_INFO : FUSION_INFO);
+
 /**
  * The team: the smartest models up to the "Standard" price, one per maker, smartest first.
  * The first one also merges the answers. Without scores: the newest models of the big makers.
+ * `open`: only open models (published on Hugging Face), which cost far less than the closed flagships.
  */
-export function fusionTeam(models: Model[] | null, scores: Map<string, Scores> | null, excluded: (m: Model) => boolean = () => false): string[] {
+export function fusionTeam(
+  models: Model[] | null,
+  scores: Map<string, Scores> | null,
+  excluded: (m: Model) => boolean = () => false,
+  open = false,
+): string[] {
   if (!models) return [];
   const now = Date.now() / 1000;
-  const pool = models.filter((m) => candidate(m, now, excluded) && blendedPrice(m) <= PRICE_CAP.standard);
+  const pool = models.filter(
+    (m) => candidate(m, now, excluded, models) && blendedPrice(m) <= PRICE_CAP.standard && (!open || !!m.hugging_face_id),
+  );
   const iq = (m: Model) => scoreOf(m, scores)?.intelligence;
   const scored = pool.filter((m) => iq(m) !== undefined);
   const ranked = scored.length
     ? scored.sort((a, b) => iq(b)! - iq(a)! || blendedPrice(a) - blendedPrice(b))
-    : pool.filter((m) => FRONTIER.some((v) => m.id.startsWith(v))).sort((a, b) => b.created - a.created);
+    : pool.filter((m) => open || FRONTIER.some((v) => m.id.startsWith(v))).sort((a, b) => b.created - a.created);
   const team: string[] = [];
   const makers = new Set<string>();
   for (const m of ranked) {

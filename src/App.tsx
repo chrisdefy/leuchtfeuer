@@ -22,13 +22,14 @@ import { CHAT_TOUR, ROOM_TOUR, SIMPLE_CHAT_TOUR, Tour } from "./components/Tour"
 import { TierMenu } from "./components/TierMenu";
 import { CreateButton, MediaModeBar } from "./components/CreateMenu";
 import { MEDIA_INFO, mediaLevels, type MediaKind } from "./lib/media";
-import { autoTiers, formatAnswerCost, resolveTiers } from "./lib/tiers";
+import { blendedPrice } from "./lib/recommend";
+import { autoTiers, formatAnswerCost, resolveTiers, unratedModels } from "./lib/tiers";
 import { setHelperData } from "./lib/helpers";
-import { fusionAnswerUsd, fusionBrief, fusionTeam } from "./lib/fusion";
+import { fusionAnswerUsd, fusionBrief, fusionInfo, fusionTeam, type FusionMode } from "./lib/fusion";
 import { ProfileMenu } from "./components/ProfileMenu";
 import { ProfileDialog } from "./components/ProfileDialog";
 import { Intro, introPending } from "./components/Intro";
-import { findLinks } from "./lib/links";
+import { WEB_NOTE, deniesWebAccess, findLinks } from "./lib/links";
 import { VISUAL_GUIDE, asksForVisual } from "./lib/visual";
 import { TEXT_GUIDE, cleanPassage, locate, passagePrompt } from "./lib/textwork";
 import { SpeechBar } from "./components/SpeechBar";
@@ -93,7 +94,9 @@ import {
   fetchModels,
   fetchVideoModels,
   freeResetTime,
+  generateImage,
   isFreeModelId,
+  isProviderFailure,
   itemPrice,
   OpenRouterError,
   type FreeQuota,
@@ -118,6 +121,8 @@ import {
   NEW_DRAFT,
   isEmptyDraft,
   readDrafts,
+  recentChat,
+  rememberChat,
   saveDrafts,
   uid,
   useChats,
@@ -190,7 +195,7 @@ export default function App() {
   const [fileError, setFileError] = useState<string | null>(null);
   const [draftWeb, setDraftWeb] = useState<boolean | null>(startDraft?.web ?? null);
   const [draftVisual, setDraftVisual] = useState<boolean | null>(startDraft?.visual ?? null);
-  const [draftFusion, setDraftFusion] = useState<boolean | null>(startDraft?.fusion ?? null);
+  const [draftFusion, setDraftFusion] = useState<boolean | "open" | null>(startDraft?.fusion ?? null);
   /** Profile of the new chat; undefined = the default profile from the settings, null = none. */
   const [draftProfile, setDraftProfile] = useState<string | null | undefined>(startDraft?.profile);
   const [profilesOpen, setProfilesOpen] = useState(false);
@@ -234,16 +239,24 @@ export default function App() {
   const modelById = useMemo(() => new Map((models ?? []).map((m) => [m.id, m])), [models]);
   const videoById = useMemo(() => new Map((videoModels ?? []).map((m) => [m.id, m])), [videoModels]);
   const tiers = useMemo(() => resolveTiers(autoTierMap, settings.tiers, (id) => modelById.has(id)), [autoTierMap, settings.tiers, modelById]);
-  /** "Beste Antwort": the models that answer together; the first one merges. */
-  const team = useMemo(() => fusionTeam(models, scores, isUncensored), [models, scores]);
-  const teamCost = useMemo(() => fusionAnswerUsd(team.map((id) => modelById.get(id)!).filter(Boolean)), [team, modelById]);
+  /** New models without a score yet: the levels cannot judge them, so the level menu shows them apart. */
+  const unratedNew = useMemo(() => unratedModels(models, scores, isUncensored), [models, scores]);
+  /** "Beste Antwort": the models that answer together; the first one merges. "Sparsam" asks open models. */
+  const strongTeam = useMemo(() => fusionTeam(models, scores, isUncensored), [models, scores]);
+  const openTeam = useMemo(() => fusionTeam(models, scores, isUncensored, true), [models, scores]);
+  const teamCostOf = (ids: string[]) => fusionAnswerUsd(ids.map((id) => modelById.get(id)!).filter(Boolean));
   const profiles = settings.profiles ?? [];
   const profileById = (id?: string | null) => (id ? profiles.find((p) => p.id === id) : undefined);
   /** The new chat's profile, until it is chosen differently there. */
   const draftProfileObj = profileById(draftProfile === undefined ? settings.defaultProfile : draftProfile);
   const profileId = activeChat ? activeChat.profile?.id : draftProfileObj?.id;
+  /** Which "Beste Antwort" the chat (or the new chat) asks for, if any. */
+  const fusionMode: FusionMode | undefined =
+    (activeChat ? activeChat.fusion : (draftFusion ?? draftProfileObj?.level === "best")) || undefined;
+  const team = fusionMode === "open" ? openTeam : strongTeam;
+  const teamCost = useMemo(() => teamCostOf(team), [team, modelById]); // eslint-disable-line react-hooks/exhaustive-deps
   /** The model a profile's level stands for. */
-  const profileModel = (p?: Profile) => (!p?.level ? undefined : p.level === "best" ? team[0] : tiers[p.level]);
+  const profileModel = (p?: Profile) => (!p?.level ? undefined : p.level === "best" ? strongTeam[0] : tiers[p.level]);
   const lanes = activeChat
     ? lanesOf(activeChat)
     : (draftLanes ?? [profileModel(draftProfileObj) ?? defaultModel]);
@@ -296,8 +309,8 @@ export default function App() {
   /** One text model: the level menu replaces the model choice in the input bar. */
   const textLane = !comparing && !videoLane && !!modelById.get(lanes[0]) && !makesImages(modelById.get(lanes[0])) && !makesAudio(modelById.get(lanes[0]));
   /** "Beste Antwort" is on and possible: one text model, a team to ask. */
-  const fusionOn =
-    textLane && team.length > 1 && (activeChat ? !!activeChat.fusion : (draftFusion ?? draftProfileObj?.level === "best"));
+  const fusionOn = textLane && team.length > 1 && !!fusionMode;
+  const fusionLabel = fusionInfo(fusionMode).label;
   // Models that would get a draft image they cannot see; sending is held back until one is swapped.
   const blindLanes = !createKind && draftFiles.some((f) => f.kind === "image")
     ? lanes.filter((id) => {
@@ -433,6 +446,24 @@ export default function App() {
     setFileError(null);
     setCreate(null);
   }
+
+  // Phones drop background tabs and reload them on return. Without this the reloaded app showed a new, empty
+  // chat, and the next question went there without any of the conversation before it.
+  const restored = useRef(false);
+  useEffect(() => {
+    if (restored.current) return;
+    restored.current = true;
+    const id = recentChat(chats);
+    if (id) openChat(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (!restored.current) return;
+    rememberChat(activeId);
+    const touch = () => document.visibilityState === "hidden" && rememberChat(activeId);
+    document.addEventListener("visibilitychange", touch);
+    return () => document.removeEventListener("visibilitychange", touch);
+  }, [activeId]);
 
   /** Change the files of a draft, on screen or parked in another chat (an upload can finish after a switch). */
   function updateDraftFiles(key: string, change: (files: Attachment[]) => Attachment[]) {
@@ -636,7 +667,13 @@ export default function App() {
   );
 
   /** API messages for `target`: system prompt, continued-chat summary, and who wrote which answer. */
-  async function buildMessages(history: Message[], target: string, chat?: Chat | null, extra?: string): Promise<ChatMessage[]> {
+  async function buildMessages(
+    history: Message[],
+    target: string,
+    chat?: Chat | null,
+    extra?: string,
+    web?: boolean,
+  ): Promise<ChatMessage[]> {
     const attributed = attributeHistory(history, target, modelName);
     const targetModel = modelById.get(target);
     // Image and music models make media; guides for charts and text cards would only confuse them.
@@ -652,6 +689,7 @@ export default function App() {
       attributed.note,
       visual && VISUAL_GUIDE,
       !makesMedia && TEXT_GUIDE,
+      web && WEB_NOTE,
       // Models do not know today's date; questions like "next Friday" need it.
       `Heute ist ${new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}.`,
       extra,
@@ -759,20 +797,35 @@ export default function App() {
         }
         brief = fusionBrief(usable.map((a) => a.content));
       }
-      const apiMessages = await buildMessages(history, model, chat, brief);
-      await streamChat(
+      if (makesImages(target) && !brief) {
+        const made = await makeImage(model, history, ctrl.signal);
+        imageUrls.push(...made.urls);
+        updateMessage(chatId, messageId, (m) => ({
+          ...m,
+          model: made.model,
+          usage: { promptTokens: 0, completionTokens: 0, cost: made.cost },
+          notice: made.notice,
+        }));
+        return;
+      }
+      // When merging, the team has already searched and opened the links.
+      const searching = web && !brief;
+      const apiMessages = await buildMessages(history, model, chat, brief, searching);
+      // Searches the model ran (if OpenRouter reports them) and the cost of an attempt that is answered again.
+      let searches: number | undefined;
+      let attemptCost = 0;
+      let earlierCost = 0;
+      const ask = (webSearch?: "tool" | "plugin") => streamChat(
         {
           apiKey: settings.apiKey,
           model,
           messages: apiMessages,
           temperature: settings.temperature,
           signal: ctrl.signal,
-          // When merging, the team has already searched and opened the links.
-          webSearch: web && !brief ? (canCallTools(target) ? "tool" : "plugin") : undefined,
+          webSearch,
           webResults: settings.webResults,
           webFetch: fetchLinks && !brief,
           reasoningEffort: effort(target),
-          image: makesImages(target) ? { aspectRatio } : undefined,
           audio: makesAudio(target) ? audioRequest(model) : undefined,
         },
         {
@@ -785,12 +838,16 @@ export default function App() {
             schedule();
           },
           onModel: (m) => updateMessage(chatId, messageId, (msg) => ({ ...msg, model: m })),
-          onUsage: (usage: Usage) =>
+          onUsage: (usage: Usage) => {
+            searches = usage.webSearches;
+            attemptCost = usage.cost ?? 0;
+            const extra = teamCost + earlierCost;
             updateMessage(chatId, messageId, (msg) => ({
               ...msg,
-              usage: teamCost ? { ...usage, cost: (usage.cost ?? 0) + teamCost } : usage,
+              usage: extra ? { ...usage, cost: (usage.cost ?? 0) + extra } : usage,
               links: msg.links && usage.webFetches !== undefined ? { ...msg.links, opened: usage.webFetches } : msg.links,
-            })),
+            }));
+          },
           onImages: (urls) => imageUrls.push(...urls),
           onAudio: (chunk) => audioChunks.push(chunk),
           onSources: (found) => {
@@ -799,6 +856,21 @@ export default function App() {
           },
         },
       );
+      // With the search tool the model decides whether to search. Weaker models sometimes skip it and claim
+      // they cannot go online; then the answer is written again with a search that always runs.
+      const tool = searching && canCallTools(target);
+      await ask(searching ? (tool ? "tool" : "plugin") : undefined);
+      if (tool && !searches && !sources.size && deniesWebAccess(content)) {
+        earlierCost = attemptCost;
+        content = "";
+        reasoning = "";
+        flush();
+        await ask("plugin");
+        updateMessage(chatId, messageId, (m) => ({
+          ...m,
+          notice: "Das Modell hatte zuerst nicht im Internet gesucht. Diese Antwort wurde mit einer Websuche neu geschrieben.",
+        }));
+      }
     } catch (e) {
       const err = e as Error;
       if (err.name !== "AbortError") {
@@ -847,6 +919,46 @@ export default function App() {
   }
 
   /**
+   * A picture for the last question. An attached photo is edited; a follow-up right after a picture changes
+   * that picture. When the provider fails, the next image level steps in (failed pictures cost nothing).
+   */
+  async function makeImage(model: string, history: Message[], signal: AbortSignal) {
+    const last = history.findLast((m) => m.role === "user");
+    const photos = (last?.attachments ?? []).filter((a) => a.kind === "image");
+    const before = history.slice(0, last ? history.lastIndexOf(last) : history.length).findLast((m) => m.role === "assistant");
+    const previous = before ? lastGeneratedImages([before]) : [];
+    const references = await Promise.all((photos.length ? photos : previous).map((a) => attachmentDataUrl(a.id)));
+    const prompt = last?.content.trim() || "Bearbeite das Bild.";
+    // Then the other levels, closest in price first.
+    const price = (id: string) => {
+      const m = modelById.get(id);
+      return m ? blendedPrice(m) : 0;
+    };
+    const others = levelLists.image
+      .map((l) => l.model)
+      .filter((id) => id !== model)
+      .sort((a, b) => Math.abs(price(a) - price(model)) - Math.abs(price(b) - price(model)));
+    const failed: string[] = [];
+    let lastError: unknown;
+    for (const id of [model, ...others].slice(0, 3)) {
+      try {
+        const made = await generateImage({ apiKey: settings.apiKey, model: id, prompt, aspectRatio, references, signal });
+        const notice = failed.length
+          ? `${failed.map(modelName).join(" und ")} hatte gerade eine Störung beim Anbieter, deshalb hat ${modelName(id)} das Bild gemacht.`
+          : undefined;
+        return { ...made, model: id, notice };
+      } catch (e) {
+        if (!isProviderFailure(e)) throw e;
+        failed.push(id);
+        lastError = e;
+      }
+    }
+    const err = lastError as OpenRouterError;
+    if (failed.length < 2) throw err;
+    throw new OpenRouterError(`Keines der Bildmodelle (${failed.map(modelName).join(", ")}) konnte gerade ein Bild machen. ${err.message}`, err.status);
+  }
+
+  /**
    * "Beste Antwort": every team member answers the question on its own, in parallel. Each finished answer
    * shows up in the message's list right away; a member that fails is noted and left out of the merge.
    */
@@ -877,7 +989,7 @@ export default function App() {
             {
               apiKey: settings.apiKey,
               model: member,
-              messages: await buildMessages(history, member, chat),
+              messages: await buildMessages(history, member, chat, undefined, web),
               temperature: settings.temperature,
               signal,
               webSearch: web ? (canCallTools(m) ? "tool" : "plugin") : undefined,
@@ -973,7 +1085,7 @@ export default function App() {
         webSearch: webOn,
         visualize: visualOn || undefined,
         reasoning,
-        fusion: fusionOn || undefined,
+        fusion: fusionOn ? fusionMode : undefined,
         profile: draftProfileObj ? { id: draftProfileObj.id, name: draftProfileObj.name, system: draftProfileObj.instruction } : undefined,
         messages: [...base, ...answers],
         createdAt: now,
@@ -1388,7 +1500,7 @@ export default function App() {
   // ---- model slots ----------------------------------------------------------
 
   /** Choosing models by hand or by level ends "Beste Antwort". */
-  function setLanes(next: string[], fusion = false) {
+  function setLanes(next: string[], fusion: FusionMode | false = false) {
     if (activeChat) updateChat(activeChat.id, (c) => ({ ...c, model: next[0], lanes: next, fusion: fusion || undefined }));
     else {
       setDraftLanes(next);
@@ -1420,9 +1532,10 @@ export default function App() {
   }
 
   /** "Beste Antwort" from the level menu: the team's lead becomes the chat's model. */
-  function pickFusion() {
-    if (!team.length) return;
-    setLanes([team[0]], true);
+  function pickFusion(mode: FusionMode) {
+    const lead = (mode === "open" ? openTeam : strongTeam)[0];
+    if (!lead) return;
+    setLanes([lead], mode);
     requestAnimationFrame(() => composer.current?.focus());
   }
 
@@ -2073,7 +2186,7 @@ export default function App() {
                     // The level menu in the input bar is the way to change it here.
                     <span className="model-chip static" title="Dieses Modell antwortet dir. Wechseln kannst du unten über die Stufe.">
                       <span className="chip-name">
-                        {fusionOn ? "Beste Antwort" : m ? shortName(m) : videoById.get(id) ? videoName(videoById.get(id)!) : id}
+                        {fusionOn ? fusionLabel : m ? shortName(m) : videoById.get(id) ? videoName(videoById.get(id)!) : id}
                       </span>
                     </span>
                   ) : (
@@ -2082,7 +2195,7 @@ export default function App() {
                     onClick={() => setPicker({ kind: "replace", lane: i })}
                     title={
                       fusionOn
-                        ? `Beste Antwort: ${team.map(modelName).join(", ")}. Klicken, um ein einzelnes Modell zu wählen.`
+                        ? `${fusionLabel}: ${team.map(modelName).join(", ")}. Klicken, um ein einzelnes Modell zu wählen.`
                         : i === 0
                           ? "Modell wechseln (⌘K)"
                           : "Modell wechseln"
@@ -2090,7 +2203,7 @@ export default function App() {
                     aria-haspopup="dialog"
                   >
                     {fusionOn ? (
-                      <span className="chip-name">Beste Antwort</span>
+                      <span className="chip-name">{fusionLabel}</span>
                     ) : (
                       <span className="chip-name">{m ? shortName(m) : videoById.get(id) ? videoName(videoById.get(id)!) : id}</span>
                     )}
@@ -2227,7 +2340,7 @@ export default function App() {
             ) : videoLane ? (
               <VideoHero video={videoLane} />
             ) : fusionOn ? (
-              <FusionHero team={team} cost={teamCost} modelName={modelName} onChange={() => setPicker({ kind: "replace", lane: 0 })} />
+              <FusionHero label={fusionLabel} team={team} cost={teamCost} modelName={modelName} onChange={() => setPicker({ kind: "replace", lane: 0 })} />
             ) : (
               <ModelHero
                 model={modelById.get(lanes[0])}
@@ -2376,7 +2489,7 @@ export default function App() {
           )}
           {pendingHandover && settings.apiKey && (
             <p className="handover-hint" role="status">
-              <strong>{fusionOn ? "Beste Antwort" : modelName(lanes[0])}</strong> übernimmt den bisherigen Verlauf
+              <strong>{fusionOn ? fusionLabel : modelName(lanes[0])}</strong> übernimmt den bisherigen Verlauf
               {pendingHandover === BEST_AUTHOR ? "." : <> und erfährt, welche Antworten von {modelName(pendingHandover)} stammen.</>}
             </p>
           )}
@@ -2428,11 +2541,23 @@ export default function App() {
                   modelById={modelById}
                   current={lanes[0]}
                   onPick={pickTier}
-                  fusion={
-                    team.length > 1 && !simple
-                      ? { on: fusionOn, team: team.map((id) => modelById.get(id)!), cost: teamCost, onPick: pickFusion }
-                      : undefined
+                  fusions={
+                    simple
+                      ? undefined
+                      : ([true, "open"] as FusionMode[])
+                          .map((mode) => {
+                            const ids = mode === "open" ? openTeam : strongTeam;
+                            return {
+                              ...fusionInfo(mode),
+                              on: fusionOn && fusionMode === mode,
+                              team: ids.map((id) => modelById.get(id)!).filter(Boolean),
+                              cost: teamCostOf(ids),
+                              onPick: () => pickFusion(mode),
+                            };
+                          })
+                          .filter((f) => f.team.length > 1)
                   }
+                  unrated={simple ? undefined : unratedNew}
                   reasoning={reasoning}
                   onReasoning={canThink && !simple ? changeReasoning : undefined}
                   onAllModels={simple ? undefined : () => setPicker({ kind: "replace", lane: 0 })}
@@ -2818,12 +2943,18 @@ function ModelHero(props: {
   );
 }
 
-function FusionHero(props: { team: string[]; cost: number | null; modelName: (id: string) => string; onChange: () => void }) {
+function FusionHero(props: {
+  label: string;
+  team: string[];
+  cost: number | null;
+  modelName: (id: string) => string;
+  onChange: () => void;
+}) {
   const names = props.team.map(props.modelName);
   return (
     <section className="hero">
       <p className="hero-provider">{names.length} Modelle, eine Antwort</p>
-      <h1 className="hero-name">Beste Antwort</h1>
+      <h1 className="hero-name">{props.label}</h1>
       <p className="hero-note">
         {names.slice(0, -1).join(", ")} und {names[names.length - 1]} beantworten deine Frage unabhängig voneinander.
         Danach macht {names[0]} daraus eine Antwort: Was stimmt, wird übernommen, Fehler und Widersprüche werden geklärt.

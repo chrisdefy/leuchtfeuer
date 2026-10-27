@@ -5822,9 +5822,10 @@ fieldset.field > legend {
 
 .tier-name {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   justify-content: space-between;
-  gap: 8px;
+  gap: 2px 8px;
   font-weight: 650;
 }
 
@@ -5873,6 +5874,49 @@ fieldset.field > legend {
   color: var(--ink);
   font-weight: 600;
   box-shadow: 0 1px 3px rgb(0 0 0 / 0.14);
+}
+
+.tier-new {
+  display: grid;
+  gap: 2px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.tier-new-title {
+  margin: 0 10px 2px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+
+.tier-new-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  text-align: left;
+}
+
+.tier-new-item:hover,
+.tier-new-item[aria-checked="true"] {
+  background: var(--line-soft);
+}
+
+.tier-new-item .tier-model {
+  color: var(--ink);
+}
+
+.tier-new-item .tier-cost {
+  margin-left: auto;
+}
+
+.tier-new-item > .icon {
+  flex: none;
+  color: var(--in);
 }
 
 .tier-all {

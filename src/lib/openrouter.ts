@@ -35,6 +35,8 @@ export interface Usage {
   cost?: number;
   /** Pages OpenRouter fetched for the model, if it reports them. */
   webFetches?: number;
+  /** Web searches the model ran, if OpenRouter reports them. */
+  webSearches?: number;
 }
 
 export type ContentPart =
@@ -69,11 +71,25 @@ function headers(apiKey?: string): HeadersInit {
   return h;
 }
 
+/**
+ * OpenRouter's "Provider returned error" says nothing; the provider's own words are in `metadata.raw`.
+ * Both go into one plain German sentence, with the raw text kept for whoever needs to look closer.
+ */
+function describeError(error: { message?: string; metadata?: { raw?: unknown; provider_name?: string } }): string {
+  const raw = error.metadata?.raw;
+  const detail = (typeof raw === "string" ? raw : raw ? JSON.stringify(raw) : "").trim().slice(0, 400);
+  const who = error.metadata?.provider_name;
+  if (/provider returned error/i.test(error.message ?? "")) {
+    return `Der Anbieter${who ? ` ${who}` : ""}, der dieses Modell betreibt, hat die Anfrage abgelehnt oder hatte eine Störung.${detail ? ` Seine Meldung: ${detail}` : ""}`;
+  }
+  return detail && !error.message?.includes(detail) ? `${error.message} (${detail})` : (error.message ?? "");
+}
+
 async function readError(res: Response): Promise<OpenRouterError> {
   let message = `Anfrage fehlgeschlagen (HTTP ${res.status}).`;
   try {
     const body = await res.json();
-    if (body?.error?.message) message = body.error.message;
+    if (body?.error?.message) message = describeError(body.error);
   } catch {
     /* body was not JSON */
   }
@@ -344,7 +360,8 @@ async function streamOnce(opts: ChatOptions, cb: StreamCallbacks): Promise<void>
       } catch {
         continue;
       }
-      if (chunk.error) throw new OpenRouterError(chunk.error.message ?? "Das Modell hat einen Fehler gemeldet.");
+      if (chunk.error)
+        throw new OpenRouterError(describeError(chunk.error) || "Das Modell hat einen Fehler gemeldet.", Number(chunk.error.code) || undefined);
       if (!reportedModel && chunk.model) {
         reportedModel = true;
         cb.onModel(chunk.model);
@@ -371,10 +388,53 @@ async function streamOnce(opts: ChatOptions, cb: StreamCallbacks): Promise<void>
           completionTokens: chunk.usage.completion_tokens ?? 0,
           cost: chunk.usage.cost,
           webFetches: fetchCount(chunk.usage.server_tool_use),
+          webSearches: chunk.usage.server_tool_use?.web_search_requests,
         });
       }
     }
   }
+}
+
+export interface ImageRequest {
+  apiKey: string;
+  model: string;
+  prompt: string;
+  aspectRatio?: string;
+  /** Photos to edit or follow, as data or https URLs. */
+  references?: string[];
+  signal: AbortSignal;
+}
+
+/**
+ * One picture from OpenRouter's Image API, the documented way to make images. Models sent through the chat
+ * endpoint with image output failed at some providers ("Provider returned error"). A failed picture is not billed.
+ */
+export async function generateImage(req: ImageRequest): Promise<{ urls: string[]; cost?: number }> {
+  const body: Record<string, unknown> = {
+    model: req.model,
+    prompt: req.prompt,
+    provider: { sort: "price", ...(zeroRetention ? { zdr: true } : {}) },
+  };
+  if (req.aspectRatio) body.aspect_ratio = req.aspectRatio;
+  if (req.references?.length) body.input_references = req.references.map((url) => ({ type: "image_url", image_url: { url } }));
+  const res = await fetch(`${API}/images`, { method: "POST", headers: headers(req.apiKey), signal: req.signal, body: JSON.stringify(body) });
+  if (!res.ok) throw await readError(res);
+  const out = await res.json();
+  const urls = ((out.data ?? []) as { b64_json?: string; url?: string; media_type?: string }[])
+    .map((d) => (d.b64_json ? `data:${d.media_type ?? "image/png"};base64,${d.b64_json}` : d.url))
+    .filter((u): u is string => !!u);
+  if (!urls.length) throw new OpenRouterError("Das Bildmodell hat kein Bild geliefert. Versuch es mit einer anderen Beschreibung.");
+  return { urls, cost: out.usage?.cost };
+}
+
+/**
+ * Worth trying another model: the provider refused or failed, is overloaded or timed out, or the model is gone.
+ * Not for the key or the balance, which another model would hit just the same.
+ */
+export function isProviderFailure(e: unknown) {
+  if (!(e instanceof OpenRouterError)) return false;
+  const s = e.status ?? 0;
+  return /^Der Anbieter/.test(e.message) || s >= 500 || s === 404 || s === 408;
 }
 
 /** Price per token as string → USD per million tokens. Negative means variable (e.g. auto router). */
